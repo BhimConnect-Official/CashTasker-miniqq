@@ -1,0 +1,3499 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <title>CashTasker</title>
+
+    <!-- Firebase v9 compat -->
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js">
+    </script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js">
+    </script>
+
+    <!-- Monteg Ads SDK -->
+    <script src='//libtl.com/sdk.js' data-zone='11191563' data-sdk='show_11191563'>
+    </script>
+
+    <style>
+        /* ===== CSS VARIABLES / THEMING ===== */
+        :root {
+            --bg-primary: #f5f5f5;
+            --bg-secondary: #ffffff;
+            --bg-card: #ffffff;
+            --bg-input: #f0f0f0;
+            --text-primary: #1a1a2e;
+            --text-secondary: #555;
+            --text-muted: #888;
+            --border-color: #e0e0e0;
+            --shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+            --shadow-hover: 0 4px 20px rgba(0, 0, 0, 0.12);
+            --accent: #6c5ce7;
+            --accent-light: #a29bfe;
+            --accent-dark: #4a3db8;
+            --gradient: linear-gradient(135deg, #6c5ce7, #a29bfe);
+            --success: #00b894;
+            --danger: #e17055;
+            --warning: #fdcb6e;
+            --radius: 16px;
+            --radius-sm: 10px;
+            --transition: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            --max-width: 480px;
+            --nav-height: 68px;
+            --header-height: 60px;
+            --font: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        }
+
+        [data-theme="dark"] {
+            --bg-primary: #0f0f1a;
+            --bg-secondary: #1a1a2e;
+            --bg-card: #222240;
+            --bg-input: #2d2d4a;
+            --text-primary: #eee;
+            --text-secondary: #bbb;
+            --text-muted: #777;
+            --border-color: #333355;
+            --shadow: 0 2px 12px rgba(0, 0, 0, 0.4);
+            --shadow-hover: 0 4px 20px rgba(0, 0, 0, 0.6);
+        }
+
+        /* ===== RESET & BASE ===== */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            font-family: var(--font);
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            transition: background var(--transition), color var(--transition);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            padding: 0;
+            margin: 0;
+            overflow-x: hidden;
+        }
+
+        #app {
+            width: 100%;
+            max-width: var(--max-width);
+            min-height: 100vh;
+            background: var(--bg-primary);
+            position: relative;
+            padding-bottom: calc(var(--nav-height) + 16px);
+            transition: background var(--transition);
+        }
+
+        /* ===== SCROLLBAR ===== */
+        ::-webkit-scrollbar {
+            width: 4px;
+        }
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: var(--accent-light);
+            border-radius: 10px;
+        }
+
+        /* ===== HEADER ===== */
+        .app-header {
+            position: sticky;
+            top: 0;
+            z-index: 50;
+            background: var(--bg-secondary);
+            padding: 12px 18px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            border-bottom: 1px solid var(--border-color);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            height: var(--header-height);
+            transition: background var(--transition), border-color var(--transition);
+        }
+
+        .app-header .logo {
+            font-size: 20px;
+            font-weight: 800;
+            background: var(--gradient);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            letter-spacing: -0.5px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .app-header .logo span {
+            font-weight: 300;
+            -webkit-text-fill-color: var(--text-secondary);
+        }
+
+        .header-actions {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .theme-toggle {
+            background: var(--bg-input);
+            border: none;
+            border-radius: 50%;
+            width: 38px;
+            height: 38px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+            cursor: pointer;
+            transition: background var(--transition);
+            color: var(--text-primary);
+        }
+
+        .theme-toggle:hover {
+            background: var(--border-color);
+        }
+
+        .avatar-btn {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: var(--gradient);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 16px;
+            color: #fff;
+            cursor: pointer;
+            border: 2px solid transparent;
+            transition: border var(--transition), transform var(--transition);
+            user-select: none;
+            flex-shrink: 0;
+            text-transform: uppercase;
+        }
+
+        .avatar-btn:active {
+            transform: scale(0.92);
+        }
+
+        /* ===== PAGES ===== */
+        .page {
+            display: none;
+            padding: 16px 18px 20px;
+            animation: fadeUp 0.35s ease;
+        }
+
+        .page.active {
+            display: block;
+        }
+
+        @keyframes fadeUp {
+            0% {
+                opacity: 0;
+                transform: translateY(16px);
+            }
+            100% {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* ===== BOTTOM NAV ===== */
+        .bottom-nav {
+            position: fixed;
+            bottom: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 100%;
+            max-width: var(--max-width);
+            height: var(--nav-height);
+            background: var(--bg-secondary);
+            border-top: 1px solid var(--border-color);
+            display: flex;
+            align-items: center;
+            justify-content: space-around;
+            padding: 0 6px;
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            z-index: 100;
+            transition: background var(--transition), border-color var(--transition);
+        }
+
+        .nav-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 2px;
+            background: none;
+            border: none;
+            color: var(--text-muted);
+            font-size: 10px;
+            font-weight: 500;
+            cursor: pointer;
+            padding: 4px 12px;
+            border-radius: 12px;
+            transition: color var(--transition), background var(--transition);
+            position: relative;
+            min-width: 52px;
+            font-family: var(--font);
+        }
+
+        .nav-item .icon {
+            font-size: 22px;
+            line-height: 1;
+            transition: transform var(--transition);
+        }
+
+        .nav-item .label {
+            font-size: 9px;
+            letter-spacing: 0.3px;
+        }
+
+        .nav-item.active {
+            color: var(--accent);
+        }
+
+        .nav-item.active .icon {
+            transform: translateY(-2px);
+        }
+
+        .nav-item .badge {
+            position: absolute;
+            top: 0;
+            right: 2px;
+            background: var(--danger);
+            color: #fff;
+            font-size: 9px;
+            font-weight: 700;
+            min-width: 18px;
+            height: 18px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0 5px;
+            transform: translate(4px, -4px);
+        }
+
+        .nav-item:active {
+            transform: scale(0.92);
+        }
+
+        /* ===== CARDS ===== */
+        .card {
+            background: var(--bg-card);
+            border-radius: var(--radius);
+            padding: 16px 18px;
+            box-shadow: var(--shadow);
+            transition: background var(--transition), box-shadow var(--transition);
+            margin-bottom: 14px;
+        }
+
+        .card-title {
+            font-size: 14px;
+            font-weight: 600;
+            margin-bottom: 10px;
+            color: var(--text-secondary);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        /* ===== BALANCE CARD ===== */
+        .balance-card {
+            background: var(--gradient);
+            color: #fff;
+            border-radius: var(--radius);
+            padding: 22px 20px;
+            margin-bottom: 16px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .balance-card::after {
+            content: '';
+            position: absolute;
+            top: -50%;
+            right: -20%;
+            width: 200px;
+            height: 200px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 50%;
+        }
+
+        .balance-card .label {
+            font-size: 13px;
+            opacity: 0.8;
+            font-weight: 500;
+        }
+
+        .balance-card .amount {
+            font-size: 36px;
+            font-weight: 800;
+            letter-spacing: -1px;
+            margin: 4px 0 2px;
+        }
+
+        .balance-card .inr {
+            font-size: 16px;
+            font-weight: 500;
+            opacity: 0.9;
+        }
+
+        .balance-card .actions {
+            display: flex;
+            gap: 10px;
+            margin-top: 14px;
+            flex-wrap: wrap;
+        }
+
+        .balance-card .actions .btn {
+            flex: 1;
+            min-width: 80px;
+            padding: 10px 14px;
+            border-radius: var(--radius-sm);
+            border: none;
+            font-weight: 600;
+            font-size: 13px;
+            cursor: pointer;
+            transition: transform var(--transition), opacity var(--transition);
+            background: rgba(255, 255, 255, 0.2);
+            color: #fff;
+            backdrop-filter: blur(4px);
+            font-family: var(--font);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+        }
+
+        .balance-card .actions .btn:active {
+            transform: scale(0.94);
+        }
+
+        .balance-card .actions .btn-primary {
+            background: rgba(255, 255, 255, 0.95);
+            color: var(--accent-dark);
+        }
+
+        /* ===== STATS GRID ===== */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+            margin-bottom: 14px;
+        }
+
+        .stat-item {
+            background: var(--bg-card);
+            border-radius: var(--radius-sm);
+            padding: 12px 8px;
+            text-align: center;
+            box-shadow: var(--shadow);
+            transition: background var(--transition), box-shadow var(--transition);
+        }
+
+        .stat-item .num {
+            font-size: 20px;
+            font-weight: 700;
+            color: var(--text-primary);
+        }
+
+        .stat-item .lbl {
+            font-size: 10px;
+            color: var(--text-muted);
+            margin-top: 2px;
+            font-weight: 500;
+        }
+
+        /* ===== ACTIVITY LIST ===== */
+        .activity-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 10px 0;
+            border-bottom: 1px solid var(--border-color);
+            transition: border-color var(--transition);
+        }
+
+        .activity-item:last-child {
+            border-bottom: none;
+        }
+
+        .activity-item .icon {
+            font-size: 20px;
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            background: var(--bg-input);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+
+        .activity-item .info {
+            flex: 1;
+        }
+
+        .activity-item .info .title {
+            font-size: 13px;
+            font-weight: 500;
+        }
+
+        .activity-item .info .sub {
+            font-size: 11px;
+            color: var(--text-muted);
+        }
+
+        .activity-item .reward {
+            font-weight: 700;
+            color: var(--success);
+            font-size: 14px;
+        }
+
+        /* ===== BUTTONS ===== */
+        .btn {
+            padding: 12px 20px;
+            border-radius: var(--radius-sm);
+            border: none;
+            font-weight: 600;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all var(--transition);
+            font-family: var(--font);
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .btn:active {
+            transform: scale(0.96);
+        }
+
+        .btn-primary {
+            background: var(--gradient);
+            color: #fff;
+        }
+
+        .btn-primary:hover {
+            opacity: 0.9;
+        }
+
+        .btn-success {
+            background: var(--success);
+            color: #fff;
+        }
+
+        .btn-danger {
+            background: var(--danger);
+            color: #fff;
+        }
+
+        .btn-outline {
+            background: transparent;
+            border: 2px solid var(--border-color);
+            color: var(--text-primary);
+        }
+
+        .btn-block {
+            width: 100%;
+            justify-content: center;
+        }
+
+        .btn-sm {
+            padding: 8px 14px;
+            font-size: 12px;
+        }
+
+        .btn:disabled {
+            opacity: 0.5;
+            pointer-events: none;
+        }
+
+        /* ===== TASK ITEMS ===== */
+        .task-item {
+            background: var(--bg-card);
+            border-radius: var(--radius-sm);
+            padding: 14px 16px;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            box-shadow: var(--shadow);
+            transition: background var(--transition), box-shadow var(--transition);
+        }
+
+        .task-item .task-icon {
+            font-size: 28px;
+            width: 48px;
+            height: 48px;
+            border-radius: 12px;
+            background: var(--bg-input);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+
+        .task-item .task-info {
+            flex: 1;
+        }
+
+        .task-item .task-info .title {
+            font-size: 14px;
+            font-weight: 600;
+        }
+
+        .task-item .task-info .desc {
+            font-size: 12px;
+            color: var(--text-secondary);
+            margin-top: 2px;
+        }
+
+        .task-item .task-info .reward {
+            font-size: 12px;
+            color: var(--success);
+            font-weight: 600;
+            margin-top: 4px;
+        }
+
+        .task-item .task-action {
+            flex-shrink: 0;
+        }
+
+        .task-item .task-action .btn {
+            min-width: 70px;
+        }
+
+        .task-item.done {
+            opacity: 0.6;
+        }
+
+        .task-item.done .task-action .btn {
+            background: var(--bg-input);
+            color: var(--text-muted);
+            pointer-events: none;
+        }
+
+        /* ===== REFERRAL ===== */
+        .ref-link-box {
+            background: var(--bg-input);
+            border-radius: var(--radius-sm);
+            padding: 12px 14px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            word-break: break-all;
+            font-size: 12px;
+            color: var(--text-secondary);
+            margin: 8px 0 12px;
+        }
+
+        .ref-link-box .link {
+            flex: 1;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            font-family: monospace;
+        }
+
+        .ref-link-box .copy-btn {
+            background: var(--accent);
+            color: #fff;
+            border: none;
+            padding: 6px 14px;
+            border-radius: 8px;
+            font-size: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            flex-shrink: 0;
+            font-family: var(--font);
+        }
+
+        .ref-link-box .copy-btn:active {
+            transform: scale(0.94);
+        }
+
+        .ref-stats {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 8px;
+            margin: 10px 0;
+        }
+
+        .ref-stats .stat {
+            background: var(--bg-input);
+            border-radius: var(--radius-sm);
+            padding: 10px;
+            text-align: center;
+        }
+
+        .ref-stats .stat .num {
+            font-size: 18px;
+            font-weight: 700;
+        }
+
+        .ref-stats .stat .lbl {
+            font-size: 10px;
+            color: var(--text-muted);
+        }
+
+        /* ===== REFERRAL LIST ===== */
+        .ref-list-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 8px 0;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .ref-list-item .avatar {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background: var(--gradient);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #fff;
+            font-size: 12px;
+            font-weight: 600;
+            flex-shrink: 0;
+            text-transform: uppercase;
+        }
+
+        .ref-list-item .info {
+            flex: 1;
+        }
+
+        .ref-list-item .info .name {
+            font-size: 13px;
+            font-weight: 500;
+        }
+
+        .ref-list-item .info .status {
+            font-size: 11px;
+            color: var(--text-muted);
+        }
+
+        .ref-list-item .status-badge {
+            font-size: 10px;
+            padding: 2px 10px;
+            border-radius: 20px;
+            font-weight: 600;
+        }
+
+        .status-badge.pending {
+            background: var(--warning);
+            color: #333;
+        }
+        .status-badge.active {
+            background: var(--success);
+            color: #fff;
+        }
+        .status-badge.fake {
+            background: var(--danger);
+            color: #fff;
+        }
+
+        /* ===== PROFILE ===== */
+        .profile-header {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            padding: 8px 0 16px;
+        }
+
+        .profile-header .avatar-lg {
+            width: 64px;
+            height: 64px;
+            border-radius: 50%;
+            background: var(--gradient);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 26px;
+            font-weight: 700;
+            color: #fff;
+            flex-shrink: 0;
+            text-transform: uppercase;
+        }
+
+        .profile-header .info .name {
+            font-size: 18px;
+            font-weight: 700;
+        }
+
+        .profile-header .info .username {
+            font-size: 13px;
+            color: var(--text-muted);
+        }
+
+        .profile-header .info .uid {
+            font-size: 11px;
+            color: var(--text-muted);
+            font-family: monospace;
+        }
+
+        .profile-stats {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 8px;
+            margin: 12px 0;
+        }
+
+        .profile-stats .stat {
+            background: var(--bg-input);
+            border-radius: var(--radius-sm);
+            padding: 10px;
+            text-align: center;
+        }
+
+        .profile-stats .stat .num {
+            font-size: 16px;
+            font-weight: 700;
+        }
+
+        .profile-stats .stat .lbl {
+            font-size: 10px;
+            color: var(--text-muted);
+        }
+
+        .profile-field {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px 0;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .profile-field .label {
+            font-size: 13px;
+            color: var(--text-secondary);
+            min-width: 80px;
+        }
+
+        .profile-field .value {
+            flex: 1;
+            font-size: 13px;
+            font-weight: 500;
+        }
+
+        .profile-field input {
+            flex: 1;
+            padding: 8px 12px;
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+            background: var(--bg-input);
+            color: var(--text-primary);
+            font-size: 13px;
+            font-family: var(--font);
+            outline: none;
+            transition: border var(--transition);
+        }
+
+        .profile-field input:focus {
+            border-color: var(--accent);
+        }
+
+        .profile-field .save-btn {
+            padding: 6px 16px;
+            border-radius: 8px;
+            border: none;
+            background: var(--accent);
+            color: #fff;
+            font-weight: 600;
+            font-size: 12px;
+            cursor: pointer;
+            font-family: var(--font);
+        }
+
+        /* ===== WITHDRAW MODAL ===== */
+        .modal-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(6px);
+            -webkit-backdrop-filter: blur(6px);
+            z-index: 200;
+            display: none;
+            align-items: flex-end;
+            justify-content: center;
+            animation: fadeIn 0.25s ease;
+        }
+
+        .modal-overlay.open {
+            display: flex;
+        }
+
+        @keyframes fadeIn {
+            0% {
+                opacity: 0;
+            }
+            100% {
+                opacity: 1;
+            }
+        }
+
+        .modal-content {
+            background: var(--bg-secondary);
+            border-radius: var(--radius) var(--radius) 0 0;
+            padding: 24px 20px 32px;
+            width: 100%;
+            max-width: var(--max-width);
+            max-height: 90vh;
+            overflow-y: auto;
+            animation: slideUp 0.3s ease;
+            transition: background var(--transition);
+        }
+
+        @keyframes slideUp {
+            0% {
+                transform: translateY(60px);
+                opacity: 0;
+            }
+            100% {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+
+        .modal-content .modal-title {
+            font-size: 20px;
+            font-weight: 700;
+            margin-bottom: 6px;
+        }
+
+        .modal-content .modal-sub {
+            font-size: 13px;
+            color: var(--text-secondary);
+            margin-bottom: 16px;
+        }
+
+        .modal-content .rule-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 6px 0;
+            font-size: 13px;
+        }
+
+        .modal-content .rule-item .check {
+            color: var(--success);
+            font-weight: 700;
+        }
+        .modal-content .rule-item .cross {
+            color: var(--danger);
+            font-weight: 700;
+        }
+
+        .modal-content .form-group {
+            margin: 14px 0;
+        }
+
+        .modal-content .form-group label {
+            display: block;
+            font-size: 13px;
+            font-weight: 500;
+            margin-bottom: 4px;
+            color: var(--text-secondary);
+        }
+
+        .modal-content .form-group input {
+            width: 100%;
+            padding: 10px 14px;
+            border-radius: var(--radius-sm);
+            border: 1px solid var(--border-color);
+            background: var(--bg-input);
+            color: var(--text-primary);
+            font-size: 14px;
+            font-family: var(--font);
+            outline: none;
+            transition: border var(--transition);
+        }
+
+        .modal-content .form-group input:focus {
+            border-color: var(--accent);
+        }
+
+        .modal-content .modal-actions {
+            display: flex;
+            gap: 10px;
+            margin-top: 16px;
+        }
+
+        .modal-content .modal-actions .btn {
+            flex: 1;
+        }
+
+        /* ===== ADMIN PANEL ===== */
+        .admin-panel {
+            display: none;
+            position: fixed;
+            inset: 0;
+            z-index: 300;
+            background: var(--bg-primary);
+            overflow-y: auto;
+            animation: fadeIn 0.3s ease;
+        }
+
+        .admin-panel.open {
+            display: block;
+        }
+
+        .admin-header {
+            position: sticky;
+            top: 0;
+            background: var(--bg-secondary);
+            padding: 14px 18px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            border-bottom: 1px solid var(--border-color);
+            z-index: 10;
+        }
+
+        .admin-header .title {
+            font-size: 18px;
+            font-weight: 700;
+            color: var(--danger);
+        }
+
+        .admin-header .close-btn {
+            background: none;
+            border: none;
+            font-size: 24px;
+            cursor: pointer;
+            color: var(--text-primary);
+        }
+
+        .admin-tabs {
+            display: flex;
+            gap: 4px;
+            padding: 8px 12px;
+            overflow-x: auto;
+            background: var(--bg-secondary);
+            border-bottom: 1px solid var(--border-color);
+            position: sticky;
+            top: 60px;
+            z-index: 5;
+        }
+
+        .admin-tabs .tab {
+            padding: 6px 14px;
+            border-radius: 20px;
+            border: none;
+            font-size: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            background: transparent;
+            color: var(--text-secondary);
+            white-space: nowrap;
+            font-family: var(--font);
+            transition: all var(--transition);
+        }
+
+        .admin-tabs .tab.active {
+            background: var(--accent);
+            color: #fff;
+        }
+
+        .admin-page {
+            display: none;
+            padding: 16px 18px;
+        }
+
+        .admin-page.active {
+            display: block;
+        }
+
+        .admin-user-item,
+        .admin-task-item,
+        .admin-withdraw-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 10px 0;
+            border-bottom: 1px solid var(--border-color);
+            flex-wrap: wrap;
+        }
+
+        .admin-user-item .info,
+        .admin-task-item .info,
+        .admin-withdraw-item .info {
+            flex: 1;
+            min-width: 120px;
+        }
+
+        .admin-user-item .info .name {
+            font-weight: 600;
+            font-size: 13px;
+        }
+
+        .admin-user-item .info .sub {
+            font-size: 11px;
+            color: var(--text-muted);
+        }
+
+        .admin-actions {
+            display: flex;
+            gap: 6px;
+            flex-wrap: wrap;
+        }
+
+        .admin-actions .btn-sm {
+            padding: 4px 10px;
+            font-size: 10px;
+        }
+
+        .admin-actions .btn-sm.danger {
+            background: var(--danger);
+            color: #fff;
+        }
+        .admin-actions .btn-sm.success {
+            background: var(--success);
+            color: #fff;
+        }
+        .admin-actions .btn-sm.warning {
+            background: var(--warning);
+            color: #333;
+        }
+
+        /* ===== BANNED OVERLAY ===== */
+        .banned-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            z-index: 400;
+            background: rgba(0, 0, 0, 0.85);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+            color: #fff;
+            padding: 40px;
+            text-align: center;
+        }
+
+        .banned-overlay.open {
+            display: flex;
+        }
+
+        .banned-overlay .icon {
+            font-size: 64px;
+            margin-bottom: 16px;
+        }
+
+        .banned-overlay h2 {
+            font-size: 24px;
+            margin-bottom: 8px;
+        }
+
+        .banned-overlay p {
+            opacity: 0.7;
+            font-size: 14px;
+            max-width: 320px;
+        }
+
+        /* ===== TOASTS ===== */
+        .toast-container {
+            position: fixed;
+            top: 16px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 500;
+            width: 100%;
+            max-width: var(--max-width);
+            padding: 0 16px;
+            pointer-events: none;
+        }
+
+        .toast {
+            background: var(--bg-card);
+            color: var(--text-primary);
+            padding: 12px 18px;
+            border-radius: var(--radius-sm);
+            box-shadow: var(--shadow-hover);
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            animation: slideDown 0.4s ease;
+            pointer-events: auto;
+            border-left: 4px solid var(--accent);
+            transition: background var(--transition), color var(--transition);
+        }
+
+        .toast.success {
+            border-left-color: var(--success);
+        }
+        .toast.error {
+            border-left-color: var(--danger);
+        }
+        .toast.warning {
+            border-left-color: var(--warning);
+        }
+
+        .toast .toast-icon {
+            font-size: 20px;
+        }
+        .toast .toast-msg {
+            flex: 1;
+            font-size: 13px;
+            font-weight: 500;
+        }
+        .toast .toast-close {
+            background: none;
+            border: none;
+            font-size: 16px;
+            cursor: pointer;
+            color: var(--text-muted);
+        }
+
+        @keyframes slideDown {
+            0% {
+                opacity: 0;
+                transform: translateY(-30px) scale(0.95);
+            }
+            100% {
+                opacity: 1;
+                transform: translateY(0) scale(1);
+            }
+        }
+
+        /* ===== EMPTY STATE ===== */
+        .empty-state {
+            text-align: center;
+            padding: 30px 10px;
+            color: var(--text-muted);
+        }
+
+        .empty-state .icon {
+            font-size: 48px;
+            margin-bottom: 10px;
+            opacity: 0.5;
+        }
+
+        .empty-state .msg {
+            font-size: 14px;
+        }
+
+        /* ===== MISC ===== */
+        .mt-8 {
+            margin-top: 8px;
+        }
+        .mt-12 {
+            margin-top: 12px;
+        }
+        .mt-16 {
+            margin-top: 16px;
+        }
+        .mb-8 {
+            margin-bottom: 8px;
+        }
+        .gap-8 {
+            gap: 8px;
+        }
+        .flex {
+            display: flex;
+        }
+        .flex-between {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .flex-center {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .text-center {
+            text-align: center;
+        }
+        .text-muted {
+            color: var(--text-muted);
+        }
+        .text-success {
+            color: var(--success);
+        }
+        .text-danger {
+            color: var(--danger);
+        }
+        .fw-700 {
+            font-weight: 700;
+        }
+        .fs-12 {
+            font-size: 12px;
+        }
+        .fs-14 {
+            font-size: 14px;
+        }
+
+        /* ===== AD COUNTER ===== */
+        .ad-counter {
+            background: var(--bg-input);
+            border-radius: var(--radius-sm);
+            padding: 12px 16px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin: 10px 0;
+        }
+
+        .ad-counter .progress {
+            flex: 1;
+            height: 6px;
+            background: var(--border-color);
+            border-radius: 10px;
+            margin: 0 12px;
+            overflow: hidden;
+        }
+
+        .ad-counter .progress .fill {
+            height: 100%;
+            background: var(--gradient);
+            border-radius: 10px;
+            transition: width 0.4s ease;
+        }
+
+        .ad-counter .count {
+            font-size: 13px;
+            font-weight: 600;
+            min-width: 40px;
+            text-align: center;
+        }
+
+        /* ===== RESPONSIVE ===== */
+        @media (max-width: 420px) {
+            .balance-card .amount {
+                font-size: 28px;
+            }
+            .stats-grid {
+                grid-template-columns: repeat(3, 1fr);
+                gap: 6px;
+            }
+            .stat-item .num {
+                font-size: 16px;
+            }
+            .nav-item {
+                min-width: 44px;
+                padding: 4px 8px;
+            }
+            .nav-item .icon {
+                font-size: 18px;
+            }
+            .nav-item .label {
+                font-size: 8px;
+            }
+            .profile-header .avatar-lg {
+                width: 50px;
+                height: 50px;
+                font-size: 20px;
+            }
+            .profile-header .info .name {
+                font-size: 16px;
+            }
+        }
+
+        /* Loading shimmer */
+        .shimmer {
+            background: var(--bg-input);
+            border-radius: var(--radius-sm);
+            height: 48px;
+            margin-bottom: 8px;
+            animation: shimmer 1.2s ease-in-out infinite;
+            background: linear-gradient(90deg, var(--bg-input) 25%, var(--border-color) 50%, var(--bg-input) 75%);
+            background-size: 200% 100%;
+        }
+
+        @keyframes shimmer {
+            0% {
+                background-position: -200% 0;
+            }
+            100% {
+                background-position: 200% 0;
+            }
+        }
+
+        /* Withdraw history item */
+        .withdraw-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 0;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .withdraw-item .info .amount {
+            font-weight: 700;
+        }
+        .withdraw-item .info .date {
+            font-size: 11px;
+            color: var(--text-muted);
+        }
+
+        .withdraw-item .status-badge {
+            font-size: 10px;
+            padding: 2px 12px;
+            border-radius: 20px;
+            font-weight: 600;
+        }
+        .withdraw-item .status-badge.pending {
+            background: var(--warning);
+            color: #333;
+        }
+        .withdraw-item .status-badge.approved {
+            background: var(--success);
+            color: #fff;
+        }
+        .withdraw-item .status-badge.rejected {
+            background: var(--danger);
+            color: #fff;
+        }
+
+        /* Settings form in admin */
+        .settings-group {
+            margin-bottom: 14px;
+        }
+
+        .settings-group label {
+            display: block;
+            font-size: 13px;
+            font-weight: 500;
+            color: var(--text-secondary);
+            margin-bottom: 4px;
+        }
+
+        .settings-group input {
+            width: 100%;
+            padding: 10px 14px;
+            border-radius: var(--radius-sm);
+            border: 1px solid var(--border-color);
+            background: var(--bg-input);
+            color: var(--text-primary);
+            font-size: 14px;
+            font-family: var(--font);
+            outline: none;
+        }
+
+        .settings-group input:focus {
+            border-color: var(--accent);
+        }
+
+        /* Admin task add form */
+        .admin-task-form {
+            background: var(--bg-card);
+            padding: 14px;
+            border-radius: var(--radius-sm);
+            margin-bottom: 14px;
+            box-shadow: var(--shadow);
+        }
+
+        .admin-task-form .row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+        }
+
+        .admin-task-form .row .full {
+            grid-column: 1 / -1;
+        }
+
+        .admin-task-form label {
+            font-size: 12px;
+            font-weight: 500;
+            color: var(--text-secondary);
+            display: block;
+            margin-bottom: 2px;
+        }
+
+        .admin-task-form input,
+        .admin-task-form select {
+            width: 100%;
+            padding: 8px 12px;
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+            background: var(--bg-input);
+            color: var(--text-primary);
+            font-size: 13px;
+            font-family: var(--font);
+            outline: none;
+        }
+
+        .admin-task-form input:focus,
+        .admin-task-form select:focus {
+            border-color: var(--accent);
+        }
+
+        /* Leaderboard */
+        .leaderboard-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 6px 0;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .leaderboard-item .rank {
+            font-weight: 700;
+            font-size: 14px;
+            color: var(--text-muted);
+            min-width: 28px;
+        }
+
+        .leaderboard-item .rank.top {
+            color: var(--accent);
+        }
+
+        .leaderboard-item .name {
+            flex: 1;
+            font-size: 13px;
+            font-weight: 500;
+        }
+
+        .leaderboard-item .earnings {
+            font-weight: 600;
+            color: var(--success);
+            font-size: 13px;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="app">
+
+        <!-- ===== BANNED OVERLAY ===== -->
+        <div class="banned-overlay" id="bannedOverlay">
+            <div class="icon">🚫</div>
+            <h2>Account Banned</h2>
+            <p>Your account has been suspended. Please contact support for assistance.</p>
+        </div>
+
+        <!-- ===== HEADER ===== -->
+        <header class="app-header">
+            <div class="logo">Cash<span>Tasker</span></div>
+            <div class="header-actions">
+                <button class="theme-toggle" id="themeToggle" aria-label="Toggle theme">🌙</button>
+                <div class="avatar-btn" id="avatarBtn">👤</div>
+            </div>
+        </header>
+
+        <!-- ===== PAGES ===== -->
+        <!-- HOME -->
+        <div class="page active" id="page-home">
+            <!-- Balance -->
+            <div class="balance-card" id="balanceCard">
+                <div class="label">💰 Your Balance</div>
+                <div class="amount" id="balanceAmount">0</div>
+                <div class="inr">≈ ₹<span id="balanceINR">0.00</span></div>
+                <div class="actions">
+                    <button class="btn" id="withdrawBtn">💳 Withdraw</button>
+                    <button class="btn btn-primary" id="watchAdBtnHome">📺 Watch Ad</button>
+                    <button class="btn" id="tasksBtnHome">📋 Tasks</button>
+                </div>
+            </div>
+
+            <!-- Stats -->
+            <div class="stats-grid" id="homeStats">
+                <div class="stat-item"><div class="num" id="statEarned">0</div><div class="lbl">Total Earned</div></div>
+                <div class="stat-item"><div class="num" id="statReferrals">0</div><div class="lbl">Referrals</div></div>
+                <div class="stat-item"><div class="num" id="statActiveRefs">0</div><div class="lbl">Active</div></div>
+            </div>
+
+            <!-- Quick Stats -->
+            <div class="card">
+                <div class="card-title">📊 Quick Stats</div>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;font-size:13px;">
+                    <div>📺 Ads: <strong id="qsAds">0</strong></div>
+                    <div>📋 Tasks: <strong id="qsTasks">0</strong></div>
+                    <div>📅 Joined: <strong id="qsJoin">-</strong></div>
+                    <div>⏳ Age: <strong id="qsAge">-</strong></div>
+                </div>
+            </div>
+
+            <!-- Recent Activity -->
+            <div class="card">
+                <div class="card-title">🕐 Recent Activity</div>
+                <div id="activityList">
+                    <div class="empty-state"><div class="icon">📭</div><div class="msg">No activity yet</div></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ADS -->
+        <div class="page" id="page-ads">
+            <div class="card">
+                <div class="card-title">📺 Watch Ads & Earn</div>
+                <p style="font-size:13px;color:var(--text-secondary);margin-bottom:10px;">
+                    Watch short ads to earn coins. Each ad rewards <strong id="adRewardDisplay">5</strong> coins.
+                </p>
+                <div class="ad-counter">
+                    <span style="font-size:13px;font-weight:500;">Today</span>
+                    <div class="progress"><div class="fill" id="adProgressFill" style="width:0%"></div></div>
+                    <span class="count" id="adCountDisplay">0 / 10</span>
+                </div>
+                <button class="btn btn-primary btn-block" id="watchAdBtn">▶️ Watch Ad</button>
+            </div>
+
+            <div class="card">
+                <div class="card-title">📜 Ad History</div>
+                <div id="adHistoryList">
+                    <div class="empty-state"><div class="icon">📭</div><div class="msg">No ads watched yet</div></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- TASKS -->
+        <div class="page" id="page-tasks">
+            <div class="card">
+                <div class="card-title">📋 Available Tasks</div>
+                <div id="taskList">
+                    <div class="empty-state"><div class="icon">📭</div><div class="msg">No tasks available</div></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- REFER -->
+        <div class="page" id="page-refer">
+            <div class="card">
+                <div class="card-title">👥 Refer & Earn</div>
+                <p style="font-size:13px;color:var(--text-secondary);margin-bottom:8px;">
+                    Share your referral link and earn <strong id="refRewardDisplay">100</strong> coins per active referral!
+                </p>
+                <div class="ref-link-box">
+                    <span class="link" id="refLink">Loading...</span>
+                    <button class="copy-btn" id="copyRefLink">Copy</button>
+                </div>
+            </div>
+
+            <div class="ref-stats">
+                <div class="stat"><div class="num" id="refTotal">0</div><div class="lbl">Total</div></div>
+                <div class="stat"><div class="num" id="refActive">0</div><div class="lbl">Active</div></div>
+                <div class="stat"><div class="num" id="refEarnings">0</div><div class="lbl">Earned</div></div>
+            </div>
+
+            <div class="card">
+                <div class="card-title">📋 Referral List</div>
+                <div id="referralList">
+                    <div class="empty-state"><div class="icon">👤</div><div class="msg">No referrals yet</div></div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-title">🏆 Leaderboard</div>
+                <div id="leaderboardList">
+                    <div class="empty-state"><div class="icon">🏆</div><div class="msg">No data yet</div></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- PROFILE -->
+        <div class="page" id="page-profile">
+            <div class="profile-header">
+                <div class="avatar-lg" id="profileAvatar">👤</div>
+                <div class="info">
+                    <div class="name" id="profileName">Loading...</div>
+                    <div class="username" id="profileUsername">@username</div>
+                    <div class="uid" id="profileUID">ID: ---</div>
+                </div>
+            </div>
+
+            <div class="profile-stats">
+                <div class="stat"><div class="num" id="pStatEarned">0</div><div class="lbl">Earned</div></div>
+                <div class="stat"><div class="num" id="pStatRefs">0</div><div class="lbl">Refs</div></div>
+                <div class="stat"><div class="num" id="pStatAds">0</div><div class="lbl">Ads</div></div>
+            </div>
+
+            <div class="card">
+                <div class="card-title">ℹ️ Account Info</div>
+                <div class="profile-field"><span class="label">Joined</span><span class="value" id="pJoin">-</span></div>
+                <div class="profile-field"><span class="label">Age</span><span class="value" id="pAge">-</span></div>
+                <div class="profile-field"><span class="label">Withdrawals</span><span class="value" id="pWithdrawals">0</span></div>
+            </div>
+
+            <div class="card">
+                <div class="card-title">💳 UPI ID</div>
+                <div class="profile-field">
+                    <input type="text" id="upiInput" placeholder="Enter your UPI ID (e.g. example@upi)" />
+                    <button class="save-btn" id="saveUpiBtn">Save</button>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-title">📜 Withdraw History</div>
+                <div id="withdrawHistoryList">
+                    <div class="empty-state"><div class="icon">📭</div><div class="msg">No withdrawals yet</div></div>
+                </div>
+            </div>
+
+            <button class="btn btn-danger btn-block" id="logoutBtn" style="margin-top:8px;">🚪 Logout</button>
+        </div>
+
+        <!-- ===== BOTTOM NAV ===== -->
+        <nav class="bottom-nav" id="bottomNav">
+            <button class="nav-item active" data-page="home"><span class="icon">🏠</span><span class="label">Home</span></button>
+            <button class="nav-item" data-page="ads"><span class="icon">📺</span><span class="label">Ads</span></button>
+            <button class="nav-item" data-page="tasks"><span class="icon">📋</span><span class="label">Tasks</span><span class="badge" id="taskBadge" style="display:none;">0</span></button>
+            <button class="nav-item" data-page="refer"><span class="icon">👥</span><span class="label">Refer</span></button>
+            <button class="nav-item" data-page="profile"><span class="icon">👤</span><span class="label">Profile</span></button>
+        </nav>
+
+        <!-- ===== WITHDRAW MODAL ===== -->
+        <div class="modal-overlay" id="withdrawModal">
+            <div class="modal-content">
+                <div class="modal-title">💳 Withdraw</div>
+                <div class="modal-sub">Convert your coins to INR and withdraw via UPI.</div>
+
+                <div id="withdrawRules">
+                    <div class="rule-item" id="ruleMinAmt">💰 Minimum amount: ₹<span id="ruleMinAmtVal">100</span></div>
+                    <div class="rule-item" id="ruleMinRefs">👥 Minimum active referrals: <span id="ruleMinRefsVal">5</span></div>
+                    <div class="rule-item" id="ruleAge">⏳ Minimum account age: <span id="ruleAgeVal">3</span> days</div>
+                    <div class="rule-item" id="ruleUpi">💳 UPI ID must be set</div>
+                </div>
+
+                <div class="form-group">
+                    <label>Amount (₹)</label>
+                    <input type="number" id="withdrawAmount" placeholder="Enter amount" min="100" />
+                </div>
+                <div class="form-group">
+                    <label>UPI ID</label>
+                    <input type="text" id="withdrawUpi" placeholder="your@upi" />
+                </div>
+
+                <div class="modal-actions">
+                    <button class="btn btn-outline" id="withdrawCancel">Cancel</button>
+                    <button class="btn btn-primary" id="withdrawSubmit">Submit Request</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- ===== ADMIN PANEL ===== -->
+        <div class="admin-panel" id="adminPanel">
+            <div class="admin-header">
+                <div class="title">🔧 Admin Panel</div>
+                <button class="close-btn" id="adminClose">✕</button>
+            </div>
+            <div class="admin-tabs" id="adminTabs">
+                <button class="tab active" data-atab="dashboard">📊</button>
+                <button class="tab" data-atab="users">👥</button>
+                <button class="tab" data-atab="tasks">📋</button>
+                <button class="tab" data-atab="withdraws">💳</button>
+                <button class="tab" data-atab="settings">⚙️</button>
+            </div>
+
+            <!-- Dashboard -->
+            <div class="admin-page active" id="atab-dashboard">
+                <div class="stats-grid" style="grid-template-columns:1fr 1fr;">
+                    <div class="stat-item"><div class="num" id="adminTotalUsers">0</div><div class="lbl">Total Users</div></div>
+                    <div class="stat-item"><div class="num" id="adminActiveToday">0</div><div class="lbl">Active Today</div></div>
+                    <div class="stat-item"><div class="num" id="adminTotalWithdraws">0</div><div class="lbl">Withdrawals</div></div>
+                    <div class="stat-item"><div class="num" id="adminCoinsDist">0</div><div class="lbl">Coins Distributed</div></div>
+                </div>
+                <div class="card"><div class="card-title">📈 Quick Overview</div><p class="text-muted fs-14">Admin dashboard loaded. Use tabs above to manage users, tasks, withdrawals, and settings.</p></div>
+            </div>
+
+            <!-- Users -->
+            <div class="admin-page" id="atab-users">
+                <div style="margin-bottom:10px;">
+                    <input type="text" id="adminUserSearch" placeholder="🔍 Search by name, ID, or username..." style="width:100%;padding:10px 14px;border-radius:var(--radius-sm);border:1px solid var(--border-color);background:var(--bg-input);color:var(--text-primary);font-size:13px;font-family:var(--font);outline:none;" />
+                </div>
+                <div id="adminUserList"></div>
+            </div>
+
+            <!-- Tasks -->
+            <div class="admin-page" id="atab-tasks">
+                <div class="admin-task-form">
+                    <div style="font-weight:600;margin-bottom:8px;">➕ Add New Task</div>
+                    <div class="row">
+                        <div class="full"><label>Title</label><input type="text" id="adminTaskTitle" placeholder="Task title" /></div>
+                        <div class="full"><label>Description</label><input type="text" id="adminTaskDesc" placeholder="Short description" /></div>
+                        <div><label>Icon (emoji)</label><input type="text" id="adminTaskIcon" placeholder="🎯" maxlength="2" /></div>
+                        <div><label>Reward (coins)</label><input type="number" id="adminTaskReward" placeholder="10" /></div>
+                        <div><label>Type</label>
+                            <select id="adminTaskType">
+                                <option value="telegram">Telegram Join</option>
+                                <option value="youtube">YouTube Subscribe</option>
+                                <option value="website">Website Visit</option>
+                                <option value="app">App Install</option>
+                                <option value="checkin">Daily Check-in</option>
+                                <option value="quiz">Quiz</option>
+                            </select>
+                        </div>
+                        <div><label>Link (optional)</label><input type="text" id="adminTaskLink" placeholder="https://..." /></div>
+                    </div>
+                    <button class="btn btn-primary btn-block mt-8" id="adminAddTaskBtn">➕ Add Task</button>
+                </div>
+                <div id="adminTaskList"></div>
+            </div>
+
+            <!-- Withdrawals -->
+            <div class="admin-page" id="atab-withdraws">
+                <div id="adminWithdrawList"></div>
+            </div>
+
+            <!-- Settings -->
+            <div class="admin-page" id="atab-settings">
+                <div class="card">
+                    <div class="card-title">⚙️ App Settings</div>
+                    <div class="settings-group"><label>Reward per Ad (coins)</label><input type="number" id="setAdReward" /></div>
+                    <div class="settings-group"><label>Daily Ad Limit</label><input type="number" id="setDailyAdLimit" /></div>
+                    <div class="settings-group"><label>Referral Reward (coins)</label><input type="number" id="setRefReward" /></div>
+                    <div class="settings-group"><label>Minimum Withdraw (₹)</label><input type="number" id="setMinWithdraw" /></div>
+                    <div class="settings-group"><label>Min Active Refs for Withdraw</label><input type="number" id="setMinRefs" /></div>
+                    <div class="settings-group"><label>Min Account Age (days)</label><input type="number" id="setMinAge" /></div>
+                    <div class="settings-group"><label>Min Ads for Referral Active</label><input type="number" id="setMinAdsForRef" /></div>
+                    <button class="btn btn-primary btn-block" id="adminSaveSettings">💾 Save Settings</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- ===== TOAST CONTAINER ===== -->
+        <div class="toast-container" id="toastContainer"></div>
+    </div>
+
+    <script>
+        // ============================================================
+        //  CASH TASKER – COMPLETE APP LOGIC
+        // ============================================================
+
+        (function() {
+            'use strict';
+
+            // -------- FIREBASE CONFIG --------
+            const firebaseConfig = {
+                apiKey: "AIzaSyCC5nYJDubEOGFWZKlnajXmOWJs_3nd6bg",
+                authDomain: "chatsphere-9563f.firebaseapp.com",
+                databaseURL: "https://chatsphere-9563f-default-rtdb.firebaseio.com",
+                projectId: "chatsphere-9563f",
+                storageBucket: "chatsphere-9563f.firebasestorage.app",
+                messagingSenderId: "800449405528",
+                appId: "1:800449405528:web:3103f06aabb8ea583be02d"
+            };
+
+            let firebaseApp, db;
+            let firebaseReady = false;
+            let isDemoMode = false;
+
+            try {
+                firebaseApp = firebase.initializeApp(firebaseConfig);
+                db = firebase.firestore();
+                firebaseReady = true;
+                console.log('🔥 Firebase initialized');
+            } catch (e) {
+                console.warn('⚠️ Firebase init failed, using demo mode', e);
+                isDemoMode = true;
+                firebaseReady = false;
+            }
+
+            // -------- TELEGRAM SDK --------
+            let tgUser = null;
+            let tgWebApp = null;
+
+            try {
+                if (window.Telegram && window.Telegram.WebApp) {
+                    tgWebApp = window.Telegram.WebApp;
+                    tgWebApp.ready();
+                    tgWebApp.expand();
+                    tgUser = tgWebApp.initDataUnsafe?.user || null;
+                    console.log('✅ Telegram user:', tgUser);
+                } else {
+                    console.warn('⚠️ Telegram WebApp not found, using demo user');
+                }
+            } catch (e) {
+                console.warn('⚠️ Telegram SDK error', e);
+            }
+
+            // -------- STATE --------
+            let currentUser = null; // full user doc
+            let currentUid = null;
+            let allTasks = [];
+            let allReferrals = [];
+            let adHistory = [];
+            let withdrawHistory = [];
+            let settings = {};
+            let adminTapCount = 0;
+            let adminTapTimer = null;
+            let isAdminMode = false;
+            let pendingTaskCount = 0;
+            let isBanned = false;
+            let deviceId = null;
+
+            // -------- DOM REFS --------
+            const $ = (s) => document.querySelector(s);
+            const $$ = (s) => document.querySelectorAll(s);
+
+            // -------- DEVICE FINGERPRINT --------
+            function getDeviceId() {
+                let id = localStorage.getItem('ct_deviceId');
+                if (!id) {
+                    const data = [
+                        screen.width, screen.height, screen.colorDepth,
+                        navigator.language, navigator.userAgent,
+                        new Date().getTimezoneOffset()
+                    ].join('|');
+                    let hash = 0;
+                    for (let i = 0; i < data.length; i++) {
+                        const char = data.charCodeAt(i);
+                        hash = ((hash << 5) - hash) + char;
+                        hash = hash & hash;
+                    }
+                    id = 'dev_' + Math.abs(hash).toString(36) + '_' + Date.now().toString(36).slice(-6);
+                    localStorage.setItem('ct_deviceId', id);
+                }
+                return id;
+            }
+            deviceId = getDeviceId();
+
+            // -------- TOAST SYSTEM --------
+            function toast(msg, type = 'info', duration = 3000) {
+                const container = document.getElementById('toastContainer');
+                const icons = { info: 'ℹ️', success: '✅', error: '❌', warning: '⚠️' };
+                const el = document.createElement('div');
+                el.className = `toast ${type}`;
+                el.innerHTML = `
+              <span class="toast-icon">${icons[type] || 'ℹ️'}</span>
+              <span class="toast-msg">${msg}</span>
+              <button class="toast-close">✕</button>
+            `;
+                el.querySelector('.toast-close').addEventListener('click', () => el.remove());
+                container.appendChild(el);
+                setTimeout(() => { if (el.parentNode) el.remove(); }, duration);
+            }
+
+            // -------- THEME --------
+            function getTheme() {
+                return localStorage.getItem('ct_theme') || 'light';
+            }
+
+            function setTheme(theme) {
+                document.documentElement.setAttribute('data-theme', theme);
+                localStorage.setItem('ct_theme', theme);
+                const btn = document.getElementById('themeToggle');
+                btn.textContent = theme === 'dark' ? '☀️' : '🌙';
+            }
+
+            function toggleTheme() {
+                const current = getTheme();
+                setTheme(current === 'dark' ? 'light' : 'dark');
+            }
+
+            // init theme
+            setTheme(getTheme());
+            document.getElementById('themeToggle').addEventListener('click', toggleTheme);
+
+            // -------- NAVIGATION --------
+            function navigateTo(page) {
+                $$('.page').forEach(p => p.classList.remove('active'));
+                const target = document.getElementById('page-' + page);
+                if (target) target.classList.add('active');
+                $$('.nav-item').forEach(n => n.classList.remove('active'));
+                document.querySelector(`.nav-item[data-page="${page}"]`)?.classList.add('active');
+                // Update task badge
+                updateTaskBadge();
+            }
+
+            document.querySelectorAll('.nav-item').forEach(item => {
+                item.addEventListener('click', () => {
+                    const page = item.dataset.page;
+                    navigateTo(page);
+                });
+            });
+
+            // Home buttons
+            document.getElementById('watchAdBtnHome').addEventListener('click', () => navigateTo('ads'));
+            document.getElementById('tasksBtnHome').addEventListener('click', () => navigateTo('tasks'));
+            document.getElementById('withdrawBtn').addEventListener('click', openWithdrawModal);
+
+            // -------- ADMIN ACCESS (5 taps on avatar) --------
+            const avatarBtn = document.getElementById('avatarBtn');
+            avatarBtn.addEventListener('click', () => {
+                if (isAdminMode) {
+                    openAdminPanel();
+                    return;
+                }
+                adminTapCount++;
+                clearTimeout(adminTapTimer);
+                adminTapTimer = setTimeout(() => { adminTapCount = 0; }, 800);
+                if (adminTapCount >= 5) {
+                    adminTapCount = 0;
+                    isAdminMode = true;
+                    toast('🔓 Admin mode activated!', 'success');
+                    openAdminPanel();
+                }
+            });
+
+            // -------- ADMIN PANEL --------
+            function openAdminPanel() {
+                document.getElementById('adminPanel').classList.add('open');
+                loadAdminData();
+            }
+
+            document.getElementById('adminClose').addEventListener('click', () => {
+                document.getElementById('adminPanel').classList.remove('open');
+            });
+
+            // Admin tabs
+            document.querySelectorAll('.admin-tabs .tab').forEach(tab => {
+                tab.addEventListener('click', () => {
+                    document.querySelectorAll('.admin-tabs .tab').forEach(t => t.classList.remove('active'));
+                    tab.classList.add('active');
+                    document.querySelectorAll('.admin-page').forEach(p => p.classList.remove('active'));
+                    const target = document.getElementById('atab-' + tab.dataset.atab);
+                    if (target) target.classList.add('active');
+                    if (tab.dataset.atab === 'users') renderAdminUsers();
+                    if (tab.dataset.atab === 'tasks') renderAdminTasks();
+                    if (tab.dataset.atab === 'withdraws') renderAdminWithdraws();
+                    if (tab.dataset.atab === 'settings') loadSettingsForm();
+                });
+            });
+
+            // -------- FIREBASE HELPERS --------
+            function dbCollection(name) {
+                if (isDemoMode) return null;
+                return db.collection(name);
+            }
+
+            async function dbGet(collection, id) {
+                if (isDemoMode) return null;
+                try {
+                    const doc = await db.collection(collection).doc(id).get();
+                    return doc.exists ? { id: doc.id, ...doc.data() } : null;
+                } catch (e) { return null; }
+            }
+
+            async function dbSet(collection, id, data) {
+                if (isDemoMode) return null;
+                try {
+                    await db.collection(collection).doc(id).set(data, { merge: true });
+                    return true;
+                } catch (e) { console.error(e); return false; }
+            }
+
+            async function dbUpdate(collection, id, data) {
+                if (isDemoMode) return null;
+                try {
+                    await db.collection(collection).doc(id).update(data);
+                    return true;
+                } catch (e) { console.error(e); return false; }
+            }
+
+            async function dbAdd(collection, data) {
+                if (isDemoMode) return null;
+                try {
+                    const ref = await db.collection(collection).add(data);
+                    return ref.id;
+                } catch (e) { console.error(e); return null; }
+            }
+
+            async function dbDelete(collection, id) {
+                if (isDemoMode) return null;
+                try {
+                    await db.collection(collection).doc(id).delete();
+                    return true;
+                } catch (e) { return false; }
+            }
+
+            async function dbQuery(collection, field, op, value) {
+                if (isDemoMode) return [];
+                try {
+                    const snap = await db.collection(collection).where(field, op, value).get();
+                    return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+                } catch (e) { return []; }
+            }
+
+            async function dbAll(collection) {
+                if (isDemoMode) return [];
+                try {
+                    const snap = await db.collection(collection).get();
+                    return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+                } catch (e) { return []; }
+            }
+
+            // -------- SETTINGS --------
+            async function loadSettings() {
+                if (isDemoMode) {
+                    settings = {
+                        adReward: 5,
+                        dailyAdLimit: 10,
+                        referralReward: 100,
+                        minWithdraw: 100,
+                        minRefsForWithdraw: 5,
+                        minAccountAge: 3,
+                        minAdsForRef: 5
+                    };
+                    return settings;
+                }
+                try {
+                    const doc = await db.collection('settings').doc('appSettings').get();
+                    if (doc.exists) {
+                        settings = doc.data();
+                    } else {
+                        settings = {
+                            adReward: 5,
+                            dailyAdLimit: 10,
+                            referralReward: 100,
+                            minWithdraw: 100,
+                            minRefsForWithdraw: 5,
+                            minAccountAge: 3,
+                            minAdsForRef: 5
+                        };
+                        await db.collection('settings').doc('appSettings').set(settings);
+                    }
+                    return settings;
+                } catch (e) {
+                    settings = {
+                        adReward: 5,
+                        dailyAdLimit: 10,
+                        referralReward: 100,
+                        minWithdraw: 100,
+                        minRefsForWithdraw: 5,
+                        minAccountAge: 3,
+                        minAdsForRef: 5
+                    };
+                    return settings;
+                }
+            }
+
+            async function saveSettings(data) {
+                if (isDemoMode) {
+                    settings = { ...settings, ...data };
+                    toast('Settings saved (demo)', 'success');
+                    return true;
+                }
+                try {
+                    await db.collection('settings').doc('appSettings').set(data, { merge: true });
+                    settings = { ...settings, ...data };
+                    toast('Settings saved!', 'success');
+                    return true;
+                } catch (e) {
+                    toast('Failed to save settings', 'error');
+                    return false;
+                }
+            }
+
+            // -------- USER AUTH --------
+            async function getOrCreateUser(telegramUser) {
+                const uid = String(telegramUser.id);
+                currentUid = uid;
+
+                if (isDemoMode) {
+                    // Demo user
+                    let demoUser = JSON.parse(localStorage.getItem('ct_demoUser') || 'null');
+                    if (!demoUser) {
+                        demoUser = {
+                            uid: uid,
+                            name: telegramUser.first_name || 'Demo User',
+                            username: telegramUser.username || 'demo',
+                            photoUrl: '',
+                            balance: 50,
+                            totalEarnings: 50,
+                            referrals: 0,
+                            activeReferrals: 0,
+                            referralEarnings: 0,
+                            adsWatched: 0,
+                            tasksDone: 0,
+                            joinDate: new Date().toISOString(),
+                            upi: '',
+                            referredBy: '',
+                            deviceId: deviceId,
+                            isBanned: false,
+                            isFakeReferral: false,
+                            withdrawalsCount: 0,
+                            completedTasks: [],
+                            recentTasks: []
+                        };
+                        localStorage.setItem('ct_demoUser', JSON.stringify(demoUser));
+                    }
+                    currentUser = demoUser;
+                    // Check ban
+                    if (currentUser.isBanned) {
+                        isBanned = true;
+                        document.getElementById('bannedOverlay').classList.add('open');
+                    }
+                    return currentUser;
+                }
+
+                try {
+                    const userDoc = await db.collection('users').doc(uid).get();
+                    if (userDoc.exists) {
+                        const data = userDoc.data();
+                        // Check device match
+                        if (data.deviceId && data.deviceId !== deviceId) {
+                            toast('⚠️ This account is linked to another device.', 'warning');
+                        }
+                        currentUser = { id: uid, ...data };
+                        if (currentUser.isBanned) {
+                            isBanned = true;
+                            document.getElementById('bannedOverlay').classList.add('open');
+                        }
+                        // Update device if needed
+                        if (!data.deviceId) {
+                            await db.collection('users').doc(uid).update({ deviceId: deviceId });
+                            currentUser.deviceId = deviceId;
+                        }
+                        return currentUser;
+                    } else {
+                        // New user
+                        const newUser = {
+                            uid: uid,
+                            name: telegramUser.first_name || 'User',
+                            username: telegramUser.username || '',
+                            photoUrl: '',
+                            balance: 0,
+                            totalEarnings: 0,
+                            referrals: 0,
+                            activeReferrals: 0,
+                            referralEarnings: 0,
+                            adsWatched: 0,
+                            tasksDone: 0,
+                            joinDate: new Date().toISOString(),
+                            upi: '',
+                            referredBy: '',
+                            deviceId: deviceId,
+                            isBanned: false,
+                            isFakeReferral: false,
+                            withdrawalsCount: 0,
+                            completedTasks: [],
+                            recentTasks: []
+                        };
+                        await db.collection('users').doc(uid).set(newUser);
+                        currentUser = { id: uid, ...newUser };
+                        // Check for referral
+                        await handleReferral(uid, telegramUser);
+                        return currentUser;
+                    }
+                } catch (e) {
+                    console.error('User fetch error:', e);
+                    toast('Error loading user data', 'error');
+                    isDemoMode = true;
+                    return getOrCreateUser(telegramUser);
+                }
+            }
+
+            // -------- REFERRAL HANDLING --------
+            async function handleReferral(newUid, tgUser) {
+                // Check if app was opened with start param
+                let startParam = '';
+                try {
+                    if (tgWebApp && tgWebApp.initDataUnsafe) {
+                        startParam = tgWebApp.initDataUnsafe.start_param || '';
+                    }
+                } catch (e) {}
+
+                if (!startParam) return;
+                const referrerId = startParam;
+                if (referrerId === newUid) {
+                    toast('Self-referral not allowed', 'warning');
+                    return;
+                }
+
+                // Check if referrer exists
+                let referrer;
+                if (isDemoMode) {
+                    const allUsers = JSON.parse(localStorage.getItem('ct_demoAllUsers') || '{}');
+                    referrer = allUsers[referrerId];
+                } else {
+                    try {
+                        const doc = await db.collection('users').doc(referrerId).get();
+                        if (doc.exists) referrer = { id: referrerId, ...doc.data() };
+                    } catch (e) {}
+                }
+
+                if (!referrer) {
+                    toast('Invalid referral link', 'error');
+                    return;
+                }
+
+                // Check device fraud
+                const newDevice = deviceId;
+                const refDevice = referrer.deviceId;
+                const isFake = newDevice === refDevice;
+
+                // Create referral record
+                const refData = {
+                    referrerId: referrerId,
+                    referredId: newUid,
+                    referredName: tgUser.first_name || 'User',
+                    status: 'pending',
+                    adsWatched: 0,
+                    isFake: isFake,
+                    deviceId: newDevice,
+                    createdAt: new Date().toISOString()
+                };
+
+                if (isDemoMode) {
+                    let refs = JSON.parse(localStorage.getItem('ct_demoReferrals') || '[]');
+                    refs.push({ id: 'ref_' + Date.now(), ...refData });
+                    localStorage.setItem('ct_demoReferrals', JSON.stringify(refs));
+                    // Update referrer
+                    let allUsers = JSON.parse(localStorage.getItem('ct_demoAllUsers') || '{}');
+                    if (allUsers[referrerId]) {
+                        allUsers[referrerId].referrals = (allUsers[referrerId].referrals || 0) + 1;
+                        localStorage.setItem('ct_demoAllUsers', JSON.stringify(allUsers));
+                    }
+                    toast('Referral recorded!', 'success');
+                    return;
+                }
+
+                try {
+                    await db.collection('referrals').add(refData);
+                    // Increment referrer's referral count
+                    await db.collection('users').doc(referrerId).update({
+                        referrals: firebase.firestore.FieldValue.increment(1)
+                    });
+                    toast('Referral recorded!', 'success');
+                } catch (e) {
+                    console.error('Referral error:', e);
+                }
+            }
+
+            // -------- UPDATE USER IN DB --------
+            async function updateUser(data) {
+                if (!currentUid) return false;
+                if (isDemoMode) {
+                    currentUser = { ...currentUser, ...data };
+                    localStorage.setItem('ct_demoUser', JSON.stringify(currentUser));
+                    return true;
+                }
+                try {
+                    await db.collection('users').doc(currentUid).update(data);
+                    currentUser = { ...currentUser, ...data };
+                    return true;
+                } catch (e) {
+                    console.error('Update user error:', e);
+                    return false;
+                }
+            }
+
+            // -------- LOAD DATA --------
+            async function loadAllData() {
+                await loadSettings();
+
+                // Load tasks
+                if (isDemoMode) {
+                    let tasks = JSON.parse(localStorage.getItem('ct_demoTasks') || 'null');
+                    if (!tasks) {
+                        tasks = [
+                            { id: 't1', title: 'Join Telegram', desc: 'Join our Telegram channel', icon: '📢',
+                            reward: 15, type: 'telegram', link: 'https://t.me/cashtasker', active: true,
+                                createdAt: new Date().toISOString() },
+                            { id: 't2', title: 'Subscribe YouTube', desc: 'Subscribe to our channel', icon: '▶️',
+                                reward: 20, type: 'youtube', link: 'https://youtube.com', active: true,
+                                createdAt: new Date().toISOString() },
+                            { id: 't3', title: 'Daily Check-in', desc: 'Claim your daily reward', icon: '📅',
+                                reward: 10, type: 'checkin', link: '', active: true,
+                            createdAt: new Date().toISOString() },
+                            { id: 't4', title: 'Visit Website', desc: 'Explore our website', icon: '🌐', reward: 12,
+                                type: 'website', link: 'https://example.com', active: true,
+                                createdAt: new Date().toISOString() },
+                        ];
+                        localStorage.setItem('ct_demoTasks', JSON.stringify(tasks));
+                    }
+                    allTasks = tasks;
+                } else {
+                    try {
+                        const snap = await db.collection('tasks').get();
+                        allTasks = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+                    } catch (e) {
+                        allTasks = [];
+                    }
+                }
+
+                // Load referrals
+                if (isDemoMode) {
+                    allReferrals = JSON.parse(localStorage.getItem('ct_demoReferrals') || '[]');
+                } else {
+                    try {
+                        const snap = await db.collection('referrals').where('referrerId', '==', currentUid).get();
+                        allReferrals = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+                    } catch (e) {
+                        allReferrals = [];
+                    }
+                }
+
+                // Load ad history
+                if (isDemoMode) {
+                    adHistory = JSON.parse(localStorage.getItem('ct_demoAdHistory') || '[]');
+                } else {
+                    try {
+                        const snap = await db.collection('adsHistory').where('userId', '==', currentUid).orderBy(
+                            'createdAt', 'desc').limit(50).get();
+                        adHistory = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+                    } catch (e) {
+                        adHistory = [];
+                    }
+                }
+
+                // Load withdraw history
+                if (isDemoMode) {
+                    withdrawHistory = JSON.parse(localStorage.getItem('ct_demoWithdraws') || '[]');
+                } else {
+                    try {
+                        const snap = await db.collection('withdrawRequests').where('userId', '==', currentUid).orderBy(
+                            'createdAt', 'desc').get();
+                        withdrawHistory = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+                    } catch (e) {
+                        withdrawHistory = [];
+                    }
+                }
+
+                // Update pending tasks count
+                updatePendingTasks();
+
+                // Render all
+                renderDashboard();
+                renderAdsPage();
+                renderTasks();
+                renderReferrals();
+                renderProfile();
+                updateTaskBadge();
+            }
+
+            // -------- UPDATE PENDING TASKS --------
+            function updatePendingTasks() {
+                if (!currentUser) return;
+                const completed = currentUser.completedTasks || [];
+                const activeTasks = allTasks.filter(t => t.active !== false);
+                pendingTaskCount = activeTasks.filter(t => !completed.includes(t.id)).length;
+            }
+
+            function updateTaskBadge() {
+                const badge = document.getElementById('taskBadge');
+                if (pendingTaskCount > 0) {
+                    badge.style.display = 'flex';
+                    badge.textContent = pendingTaskCount;
+                } else {
+                    badge.style.display = 'none';
+                }
+            }
+
+            // -------- RENDER: DASHBOARD --------
+            function renderDashboard() {
+                if (!currentUser) return;
+                const u = currentUser;
+                document.getElementById('balanceAmount').textContent = u.balance || 0;
+                const inr = ((u.balance || 0) / 25).toFixed(2);
+                document.getElementById('balanceINR').textContent = inr;
+
+                document.getElementById('statEarned').textContent = u.totalEarnings || 0;
+                document.getElementById('statReferrals').textContent = u.referrals || 0;
+                document.getElementById('statActiveRefs').textContent = u.activeReferrals || 0;
+
+                document.getElementById('qsAds').textContent = u.adsWatched || 0;
+                document.getElementById('qsTasks').textContent = u.tasksDone || 0;
+                const joinDate = u.joinDate ? new Date(u.joinDate) : new Date();
+                document.getElementById('qsJoin').textContent = joinDate.toLocaleDateString();
+                const age = Math.floor((Date.now() - joinDate.getTime()) / (1000 * 60 * 60 * 24));
+                document.getElementById('qsAge').textContent = age + 'd';
+
+                // Recent activity
+                const list = document.getElementById('activityList');
+                const activities = u.recentTasks || [];
+                if (activities.length === 0) {
+                    list.innerHTML =
+                        `<div class="empty-state"><div class="icon">📭</div><div class="msg">No activity yet</div></div>`;
+                } else {
+                    list.innerHTML = activities.slice(0, 5).map(a => `
+                <div class="activity-item">
+                  <div class="icon">${a.icon || '📌'}</div>
+                  <div class="info"><div class="title">${a.title || 'Activity'}</div><div class="sub">${a.time || ''}</div></div>
+                  <div class="reward">+${a.reward || 0}</div>
+                </div>
+              `).join('');
+                }
+
+                // Update withdraw rules display
+                document.getElementById('ruleMinAmtVal').textContent = settings.minWithdraw || 100;
+                document.getElementById('ruleMinRefsVal').textContent = settings.minRefsForWithdraw || 5;
+                document.getElementById('ruleAgeVal').textContent = settings.minAccountAge || 3;
+            }
+
+            // -------- RENDER: ADS --------
+            function renderAdsPage() {
+                const reward = settings.adReward || 5;
+                document.getElementById('adRewardDisplay').textContent = reward;
+
+                const dailyLimit = settings.dailyAdLimit || 10;
+                const watched = currentUser?.adsWatched || 0;
+                // For today's count, we need to count today's ads. Using simple approach: stored in user
+                // We'll track daily via adsWatchedToday in user
+                let todayCount = currentUser?.adsWatchedToday || 0;
+                // Reset daily if new day
+                const lastAdDate = currentUser?.lastAdDate || '';
+                const today = new Date().toDateString();
+                if (lastAdDate !== today) {
+                    todayCount = 0;
+                    updateUser({ adsWatchedToday: 0, lastAdDate: today });
+                }
+
+                document.getElementById('adCountDisplay').textContent = `${todayCount} / ${dailyLimit}`;
+                const pct = dailyLimit > 0 ? Math.min(100, (todayCount / dailyLimit) * 100) : 0;
+                document.getElementById('adProgressFill').style.width = pct + '%';
+
+                // Ad history
+                const list = document.getElementById('adHistoryList');
+                if (adHistory.length === 0) {
+                    list.innerHTML =
+                        `<div class="empty-state"><div class="icon">📭</div><div class="msg">No ads watched yet</div></div>`;
+                } else {
+                    list.innerHTML = adHistory.slice(0, 20).map(a => `
+                <div class="activity-item">
+                  <div class="icon">📺</div>
+                  <div class="info"><div class="title">Ad Watched</div><div class="sub">${a.createdAt ? new Date(a.createdAt).toLocaleString() : ''}</div></div>
+                  <div class="reward">+${a.reward || 0}</div>
+                </div>
+              `).join('');
+                }
+            }
+
+            // -------- WATCH AD --------
+            async function watchAd() {
+                if (isBanned) {
+                    toast('Your account is banned', 'error');
+                    return;
+                }
+
+                const dailyLimit = settings.dailyAdLimit || 10;
+                let todayCount = currentUser?.adsWatchedToday || 0;
+                const today = new Date().toDateString();
+                if (currentUser?.lastAdDate !== today) {
+                    todayCount = 0;
+                    await updateUser({ adsWatchedToday: 0, lastAdDate: today });
+                }
+
+                if (todayCount >= dailyLimit) {
+                    toast('Daily ad limit reached!', 'warning');
+                    return;
+                }
+
+                // Show Monteg ad
+                try {
+                    // Check if Monteg SDK is loaded
+                    if (typeof show_11191563 === 'function') {
+                        toast('Loading ad...', 'info');
+                        await show_11191563();
+                    } else {
+                        // Fallback: simulate ad
+                        toast('Ad loaded (simulated)', 'info');
+                        await new Promise(r => setTimeout(r, 2000));
+                    }
+
+                    // Reward user
+                    const reward = settings.adReward || 5;
+                    const newBalance = (currentUser.balance || 0) + reward;
+                    const newTotal = (currentUser.totalEarnings || 0) + reward;
+                    const newAdsWatched = (currentUser.adsWatched || 0) + 1;
+                    const newToday = (currentUser.adsWatchedToday || 0) + 1;
+
+                    // Update user
+                    await updateUser({
+                        balance: newBalance,
+                        totalEarnings: newTotal,
+                        adsWatched: newAdsWatched,
+                        adsWatchedToday: newToday,
+                        lastAdDate: new Date().toDateString()
+                    });
+
+                    // Add to ad history
+                    const adEntry = {
+                        userId: currentUid,
+                        reward: reward,
+                        createdAt: new Date().toISOString()
+                    };
+                    if (isDemoMode) {
+                        adHistory.push({ ...adEntry, id: 'ad_' + Date.now() });
+                        localStorage.setItem('ct_demoAdHistory', JSON.stringify(adHistory));
+                    } else {
+                        await db.collection('adsHistory').add(adEntry);
+                        // Refresh ad history
+                        const snap = await db.collection('adsHistory').where('userId', '==', currentUid).orderBy(
+                            'createdAt', 'desc').limit(50).get();
+                        adHistory = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+                    }
+
+                    // Update referral ads watched
+                    await updateReferralAdsWatched();
+
+                    toast(`🎉 +${reward} coins for watching ad!`, 'success');
+                    renderAll();
+
+                } catch (e) {
+                    console.error('Ad error:', e);
+                    toast('Ad failed to load. Please try again.', 'error');
+                }
+            }
+
+            // -------- UPDATE REFERRAL ADS WATCHED --------
+            async function updateReferralAdsWatched() {
+                // Find pending referral where this user is the referred
+                if (isDemoMode) {
+                    let refs = JSON.parse(localStorage.getItem('ct_demoReferrals') || '[]');
+                    let updated = false;
+                    refs = refs.map(r => {
+                        if (r.referredId === currentUid && r.status === 'pending') {
+                            const newCount = (r.adsWatched || 0) + 1;
+                            const minAds = settings.minAdsForRef || 5;
+                            if (newCount >= minAds) {
+                                r.status = 'active';
+                                // Reward referrer
+                                const refReward = settings.referralReward || 100;
+                                let allUsers = JSON.parse(localStorage.getItem('ct_demoAllUsers') || '{}');
+                                if (allUsers[r.referrerId]) {
+                                    allUsers[r.referrerId].balance = (allUsers[r.referrerId].balance || 0) + refReward;
+                                    allUsers[r.referrerId].totalEarnings = (allUsers[r.referrerId].totalEarnings || 0) +
+                                        refReward;
+                                    allUsers[r.referrerId].activeReferrals = (allUsers[r.referrerId].activeReferrals ||
+                                        0) + 1;
+                                    localStorage.setItem('ct_demoAllUsers', JSON.stringify(allUsers));
+                                    // Also update currentUser if referrer is current user
+                                    if (r.referrerId === currentUid) {
+                                        currentUser.balance = (currentUser.balance || 0) + refReward;
+                                        currentUser.totalEarnings = (currentUser.totalEarnings || 0) + refReward;
+                                        currentUser.activeReferrals = (currentUser.activeReferrals || 0) + 1;
+                                        localStorage.setItem('ct_demoUser', JSON.stringify(currentUser));
+                                    }
+                                }
+                                toast('🎉 Referral is now active!', 'success');
+                            }
+                            r.adsWatched = newCount;
+                            updated = true;
+                            return r;
+                        }
+                        return r;
+                    });
+                    if (updated) {
+                        localStorage.setItem('ct_demoReferrals', JSON.stringify(refs));
+                        allReferrals = refs;
+                    }
+                    return;
+                }
+
+                try {
+                    const snap = await db.collection('referrals')
+                        .where('referredId', '==', currentUid)
+                        .where('status', '==', 'pending')
+                        .get();
+
+                    for (const doc of snap.docs) {
+                        const data = doc.data();
+                        const newCount = (data.adsWatched || 0) + 1;
+                        const minAds = settings.minAdsForRef || 5;
+                        if (newCount >= minAds) {
+                            // Activate referral
+                            await doc.ref.update({ status: 'active', adsWatched: newCount });
+                            // Reward referrer
+                            const refReward = settings.referralReward || 100;
+                            await db.collection('users').doc(data.referrerId).update({
+                                balance: firebase.firestore.FieldValue.increment(refReward),
+                                totalEarnings: firebase.firestore.FieldValue.increment(refReward),
+                                activeReferrals: firebase.firestore.FieldValue.increment(1)
+                            });
+                            toast('🎉 Referral is now active!', 'success');
+                        } else {
+                            await doc.ref.update({ adsWatched: newCount });
+                        }
+                    }
+                } catch (e) {
+                    console.error('Referral update error:', e);
+                }
+            }
+
+            // -------- RENDER: TASKS --------
+            function renderTasks() {
+                const list = document.getElementById('taskList');
+                const completed = currentUser?.completedTasks || [];
+
+                const activeTasks = allTasks.filter(t => t.active !== false);
+                if (activeTasks.length === 0) {
+                    list.innerHTML =
+                    `<div class="empty-state"><div class="icon">📭</div><div class="msg">No tasks available</div></div>`;
+                    return;
+                }
+
+                list.innerHTML = activeTasks.map(t => {
+                    const done = completed.includes(t.id);
+                    return `
+                <div class="task-item ${done ? 'done' : ''}">
+                  <div class="task-icon">${t.icon || '📌'}</div>
+                  <div class="task-info">
+                    <div class="title">${t.title}</div>
+                    <div class="desc">${t.desc || ''}</div>
+                    <div class="reward">+${t.reward || 0} coins</div>
+                  </div>
+                  <div class="task-action">
+                    ${done ? '<button class="btn btn-sm" disabled>✅ Done</button>' :
+                      `<button class="btn btn-sm btn-primary" data-taskid="${t.id}">Complete</button>`}
+                  </div>
+                </div>
+              `;
+                }).join('');
+
+                // Event listeners
+                list.querySelectorAll('[data-taskid]').forEach(btn => {
+                    btn.addEventListener('click', () => completeTask(btn.dataset.taskid));
+                });
+            }
+
+            // -------- COMPLETE TASK --------
+            async function completeTask(taskId) {
+                if (isBanned) {
+                    toast('Your account is banned', 'error');
+                    return;
+                }
+
+                const task = allTasks.find(t => t.id === taskId);
+                if (!task) { toast('Task not found', 'error'); return; }
+
+                const completed = currentUser?.completedTasks || [];
+                if (completed.includes(taskId)) {
+                    toast('Task already completed', 'warning');
+                    return;
+                }
+
+                // Simulate verification for task types
+                if (task.type === 'telegram' || task.type === 'youtube' || task.type === 'website') {
+                    toast('Verifying...', 'info');
+                    await new Promise(r => setTimeout(r, 1200));
+                }
+
+                // Reward
+                const reward = task.reward || 10;
+                const newBalance = (currentUser.balance || 0) + reward;
+                const newTotal = (currentUser.totalEarnings || 0) + reward;
+                const newTasksDone = (currentUser.tasksDone || 0) + 1;
+                const newCompleted = [...completed, taskId];
+
+                // Recent activity
+                const recent = currentUser.recentTasks || [];
+                recent.unshift({
+                    icon: task.icon || '📌',
+                    title: task.title,
+                    reward: reward,
+                    time: new Date().toLocaleString()
+                });
+                if (recent.length > 20) recent.pop();
+
+                await updateUser({
+                    balance: newBalance,
+                    totalEarnings: newTotal,
+                    tasksDone: newTasksDone,
+                    completedTasks: newCompleted,
+                    recentTasks: recent
+                });
+
+                toast(`🎉 +${reward} coins for completing "${task.title}"!`, 'success');
+                renderAll();
+            }
+
+            // -------- RENDER: REFERRALS --------
+            function renderReferrals() {
+                const u = currentUser;
+                document.getElementById('refTotal').textContent = u.referrals || 0;
+                document.getElementById('refActive').textContent = u.activeReferrals || 0;
+                document.getElementById('refEarnings').textContent = u.referralEarnings || 0;
+                document.getElementById('refRewardDisplay').textContent = settings.referralReward || 100;
+
+                // Referral link
+                const botUsername = 'Cash_Taskerbot';
+                const link = `https://t.me/${botUsername}?start=${currentUid}`;
+                document.getElementById('refLink').textContent = link;
+
+                // Referral list
+                const list = document.getElementById('referralList');
+                if (allReferrals.length === 0) {
+                    list.innerHTML =
+                        `<div class="empty-state"><div class="icon">👤</div><div class="msg">No referrals yet</div></div>`;
+                } else {
+                    list.innerHTML = allReferrals.map(r => {
+                        const status = r.isFake ? 'fake' : r.status;
+                        const label = status === 'pending' ? '⏳ Pending' :
+                            status === 'active' ? '✅ Active' : '🚫 Fake';
+                        const cls = status === 'pending' ? 'pending' :
+                            status === 'active' ? 'active' : 'fake';
+                        return `
+                  <div class="ref-list-item">
+                    <div class="avatar">${(r.referredName || 'U').charAt(0)}</div>
+                    <div class="info">
+                      <div class="name">${r.referredName || 'User'}</div>
+                      <div class="status">${r.isFake ? '🚫 Fake referral' : 'Ads: ' + (r.adsWatched || 0)}</div>
+                    </div>
+                    <span class="status-badge ${cls}">${label}</span>
+                  </div>
+                `;
+                    }).join('');
+                }
+
+                // Leaderboard (demo: from all users)
+                renderLeaderboard();
+            }
+
+            // -------- RENDER: LEADERBOARD --------
+            async function renderLeaderboard() {
+                const list = document.getElementById('leaderboardList');
+                let topUsers = [];
+
+                if (isDemoMode) {
+                    const allUsers = JSON.parse(localStorage.getItem('ct_demoAllUsers') || '{}');
+                    topUsers = Object.values(allUsers)
+                        .filter(u => u.referralEarnings > 0)
+                        .sort((a, b) => (b.referralEarnings || 0) - (a.referralEarnings || 0))
+                        .slice(0, 10);
+                } else {
+                    try {
+                        const snap = await db.collection('users')
+                            .orderBy('referralEarnings', 'desc')
+                            .limit(10)
+                            .get();
+                        topUsers = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+                    } catch (e) {
+                        topUsers = [];
+                    }
+                }
+
+                if (topUsers.length === 0) {
+                    list.innerHTML =
+                        `<div class="empty-state"><div class="icon">🏆</div><div class="msg">No data yet</div></div>`;
+                    return;
+                }
+
+                list.innerHTML = topUsers.map((u, i) => `
+              <div class="leaderboard-item">
+                <div class="rank ${i < 3 ? 'top' : ''}">#${i+1}</div>
+                <div class="name">${u.name || 'User'}</div>
+                <div class="earnings">${u.referralEarnings || 0} coins</div>
+              </div>
+            `).join('');
+            }
+
+            // -------- RENDER: PROFILE --------
+            function renderProfile() {
+                const u = currentUser;
+                if (!u) return;
+
+                document.getElementById('profileAvatar').textContent = (u.name || 'U').charAt(0).toUpperCase();
+                document.getElementById('profileName').textContent = u.name || 'User';
+                document.getElementById('profileUsername').textContent = u.username ? '@' + u.username : 'No username';
+                document.getElementById('profileUID').textContent = 'ID: ' + (u.uid || currentUid);
+
+                document.getElementById('pStatEarned').textContent = u.totalEarnings || 0;
+                document.getElementById('pStatRefs').textContent = u.referrals || 0;
+                document.getElementById('pStatAds').textContent = u.adsWatched || 0;
+
+                const joinDate = u.joinDate ? new Date(u.joinDate) : new Date();
+                document.getElementById('pJoin').textContent = joinDate.toLocaleDateString();
+                const age = Math.floor((Date.now() - joinDate.getTime()) / (1000 * 60 * 60 * 24));
+                document.getElementById('pAge').textContent = age + ' days';
+                document.getElementById('pWithdrawals').textContent = u.withdrawalsCount || 0;
+
+                document.getElementById('upiInput').value = u.upi || '';
+            }
+
+            // -------- WITHDRAW --------
+            function openWithdrawModal() {
+                if (isBanned) {
+                    toast('Your account is banned', 'error');
+                    return;
+                }
+                const modal = document.getElementById('withdrawModal');
+                modal.classList.add('open');
+
+                // Check rules
+                const minAmt = settings.minWithdraw || 100;
+                const minRefs = settings.minRefsForWithdraw || 5;
+                const minAge = settings.minAccountAge || 3;
+                const hasUpi = currentUser?.upi && currentUser.upi.length > 0;
+
+                const joinDate = currentUser?.joinDate ? new Date(currentUser.joinDate) : new Date();
+                const age = Math.floor((Date.now() - joinDate.getTime()) / (1000 * 60 * 60 * 24));
+
+                document.getElementById('ruleMinAmt').innerHTML =
+                    `💰 Minimum amount: ₹${minAmt} ${(currentUser?.balance || 0) / 10 >= minAmt ? '✅' : '❌'}`;
+                document.getElementById('ruleMinRefs').innerHTML =
+                    `👥 Minimum active referrals: ${minRefs} ${(currentUser?.activeReferrals || 0) >= minRefs ? '✅' : '❌'}`;
+                document.getElementById('ruleAge').innerHTML =
+                    `⏳ Minimum account age: ${minAge} days ${age >= minAge ? '✅' : '❌'}`;
+                document.getElementById('ruleUpi').innerHTML =
+                    `💳 UPI ID must be set ${hasUpi ? '✅' : '❌'}`;
+
+                document.getElementById('withdrawUpi').value = currentUser?.upi || '';
+                document.getElementById('withdrawAmount').value = '';
+            }
+
+            document.getElementById('withdrawCancel').addEventListener('click', () => {
+                document.getElementById('withdrawModal').classList.remove('open');
+            });
+
+            document.getElementById('withdrawSubmit').addEventListener('click', async () => {
+                const amount = parseInt(document.getElementById('withdrawAmount').value);
+                const upi = document.getElementById('withdrawUpi').value.trim();
+
+                if (!amount || amount < (settings.minWithdraw || 100)) {
+                    toast(`Minimum withdrawal is ₹${settings.minWithdraw || 100}`, 'warning');
+                    return;
+                }
+
+                if (!upi) {
+                    toast('Please enter a UPI ID', 'warning');
+                    return;
+                }
+
+                // Check eligibility
+                const minRefs = settings.minRefsForWithdraw || 5;
+                const minAge = settings.minAccountAge || 3;
+                const joinDate = currentUser?.joinDate ? new Date(currentUser.joinDate) : new Date();
+                const age = Math.floor((Date.now() - joinDate.getTime()) / (1000 * 60 * 60 * 24));
+                const hasUpi = currentUser?.upi && currentUser.upi.length > 0;
+
+                if ((currentUser?.activeReferrals || 0) < minRefs) {
+                    toast(`Need ${minRefs} active referrals to withdraw`, 'warning');
+                    return;
+                }
+                if (age < minAge) {
+                    toast(`Account must be at least ${minAge} days old`, 'warning');
+                    return;
+                }
+                if (!hasUpi) {
+                    toast('Please save your UPI ID first', 'warning');
+                    return;
+                }
+
+                // Check coin balance
+                const requiredCoins = amount * 10;
+                if ((currentUser?.balance || 0) < requiredCoins) {
+                    toast('Insufficient balance!', 'error');
+                    return;
+                }
+
+                // Create withdrawal request
+                const reqData = {
+                    userId: currentUid,
+                    userName: currentUser?.name || 'User',
+                    amount: amount,
+                    upi: upi,
+                    status: 'pending',
+                    createdAt: new Date().toISOString()
+                };
+
+                if (isDemoMode) {
+                    withdrawHistory.push({ ...reqData, id: 'wd_' + Date.now() });
+                    localStorage.setItem('ct_demoWithdraws', JSON.stringify(withdrawHistory));
+                    // Deduct balance
+                    await updateUser({ balance: (currentUser.balance || 0) - requiredCoins });
+                    toast('Withdrawal request submitted! (demo)', 'success');
+                } else {
+                    try {
+                        await db.collection('withdrawRequests').add(reqData);
+                        // Deduct balance
+                        await db.collection('users').doc(currentUid).update({
+                            balance: firebase.firestore.FieldValue.increment(-requiredCoins),
+                            withdrawalsCount: firebase.firestore.FieldValue.increment(1)
+                        });
+                        currentUser.balance = (currentUser.balance || 0) - requiredCoins;
+                        currentUser.withdrawalsCount = (currentUser.withdrawalsCount || 0) + 1;
+                        // Refresh withdraw history
+                        const snap = await db.collection('withdrawRequests')
+                            .where('userId', '==', currentUid)
+                            .orderBy('createdAt', 'desc')
+                            .get();
+                        withdrawHistory = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+                        toast('✅ Withdrawal request submitted!', 'success');
+                    } catch (e) {
+                        toast('Failed to submit withdrawal', 'error');
+                        return;
+                    }
+                }
+
+                document.getElementById('withdrawModal').classList.remove('open');
+                renderAll();
+            });
+
+            // -------- COPY REFERRAL LINK --------
+            document.getElementById('copyRefLink').addEventListener('click', () => {
+                const link = document.getElementById('refLink').textContent;
+                navigator.clipboard.writeText(link).then(() => {
+                    toast('📋 Link copied!', 'success');
+                }).catch(() => {
+                    // Fallback
+                    const ta = document.createElement('textarea');
+                    ta.value = link;
+                    document.body.appendChild(ta);
+                    ta.select();
+                    document.execCommand('copy');
+                    ta.remove();
+                    toast('📋 Link copied!', 'success');
+                });
+            });
+
+            // -------- SAVE UPI --------
+            document.getElementById('saveUpiBtn').addEventListener('click', async () => {
+                const upi = document.getElementById('upiInput').value.trim();
+                if (!upi) {
+                    toast('Please enter a UPI ID', 'warning');
+                    return;
+                }
+                await updateUser({ upi: upi });
+                toast('✅ UPI ID saved!', 'success');
+                renderProfile();
+            });
+
+            // -------- LOGOUT --------
+            document.getElementById('logoutBtn').addEventListener('click', () => {
+                if (confirm('Are you sure you want to logout?')) {
+                    localStorage.removeItem('ct_demoUser');
+                    toast('Logged out', 'info');
+                    // Reload
+                    location.reload();
+                }
+            });
+
+            // -------- ADMIN: LOAD DATA --------
+            async function loadAdminData() {
+                // Dashboard stats
+                let totalUsers = 0,
+                    activeToday = 0,
+                    totalWithdraws = 0,
+                    coinsDist = 0;
+
+                if (isDemoMode) {
+                    const allUsers = JSON.parse(localStorage.getItem('ct_demoAllUsers') || '{}');
+                    totalUsers = Object.keys(allUsers).length;
+                    const withdraws = JSON.parse(localStorage.getItem('ct_demoWithdraws') || '[]');
+                    totalWithdraws = withdraws.length;
+                    coinsDist = Object.values(allUsers).reduce((s, u) => s + (u.totalEarnings || 0), 0);
+                    activeToday = Math.min(totalUsers, 5);
+                } else {
+                    try {
+                        const uSnap = await db.collection('users').get();
+                        totalUsers = uSnap.size;
+                        const wSnap = await db.collection('withdrawRequests').get();
+                        totalWithdraws = wSnap.size;
+                        const cSnap = await db.collection('users').get();
+                        coinsDist = cSnap.docs.reduce((s, d) => s + (d.data().totalEarnings || 0), 0);
+                        activeToday = Math.min(totalUsers, 10);
+                    } catch (e) {}
+                }
+
+                document.getElementById('adminTotalUsers').textContent = totalUsers;
+                document.getElementById('adminActiveToday').textContent = activeToday;
+                document.getElementById('adminTotalWithdraws').textContent = totalWithdraws;
+                document.getElementById('adminCoinsDist').textContent = coinsDist;
+
+                renderAdminUsers();
+                renderAdminTasks();
+                renderAdminWithdraws();
+                loadSettingsForm();
+            }
+
+            // -------- ADMIN: USERS --------
+            async function renderAdminUsers() {
+                const list = document.getElementById('adminUserList');
+                const search = document.getElementById('adminUserSearch')?.value?.toLowerCase() || '';
+
+                let users = [];
+                if (isDemoMode) {
+                    const all = JSON.parse(localStorage.getItem('ct_demoAllUsers') || '{}');
+                    users = Object.values(all);
+                } else {
+                    try {
+                        const snap = await db.collection('users').get();
+                        users = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+                    } catch (e) { users = []; }
+                }
+
+                if (search) {
+                    users = users.filter(u =>
+                        (u.name || '').toLowerCase().includes(search) ||
+                        (u.username || '').toLowerCase().includes(search) ||
+                        (u.uid || '').toLowerCase().includes(search)
+                    );
+                }
+
+                if (users.length === 0) {
+                    list.innerHTML = `<div class="empty-state"><div class="msg">No users found</div></div>`;
+                    return;
+                }
+
+                list.innerHTML = users.map(u => `
+              <div class="admin-user-item">
+                <div class="info">
+                  <div class="name">${u.name || 'User'} ${u.isBanned ? '🚫' : ''}</div>
+                  <div class="sub">ID: ${u.uid || u.id} | Balance: ${u.balance || 0} | Refs: ${u.referrals || 0}</div>
+                </div>
+                <div class="admin-actions">
+                  <button class="btn-sm btn-primary" data-action="editBal" data-uid="${u.uid || u.id}">💰</button>
+                  <button class="btn-sm ${u.isBanned ? 'success' : 'danger'}" data-action="toggleBan" data-uid="${u.uid || u.id}">${u.isBanned ? '🔓' : '🚫'}</button>
+                  ${u.isFakeReferral ? `<button class="btn-sm warning" data-action="clearFake" data-uid="${u.uid || u.id}">🧹</button>` : ''}
+                </div>
+              </div>
+            `).join('');
+
+                // Event listeners
+                list.querySelectorAll('[data-action="editBal"]').forEach(btn => {
+                    btn.addEventListener('click', async () => {
+                        const uid = btn.dataset.uid;
+                        const newBal = prompt('Enter new balance (coins):');
+                        if (newBal === null) return;
+                        const num = parseInt(newBal);
+                        if (isNaN(num) || num < 0) { toast('Invalid amount', 'error'); return; }
+                        if (isDemoMode) {
+                            let all = JSON.parse(localStorage.getItem('ct_demoAllUsers') || '{}');
+                            if (all[uid]) { all[uid].balance = num;
+                                localStorage.setItem('ct_demoAllUsers', JSON.stringify(all)); }
+                            if (uid === currentUid) { currentUser.balance = num;
+                                localStorage.setItem('ct_demoUser', JSON.stringify(currentUser)); }
+                            toast('Balance updated (demo)', 'success');
+                            renderAdminUsers();
+                            renderAll();
+                            return;
+                        }
+                        try {
+                            await db.collection('users').doc(uid).update({ balance: num });
+                            toast('Balance updated!', 'success');
+                            renderAdminUsers();
+                            if (uid === currentUid) { currentUser.balance = num;
+                                renderAll(); }
+                        } catch (e) { toast('Failed', 'error'); }
+                    });
+                });
+
+                list.querySelectorAll('[data-action="toggleBan"]').forEach(btn => {
+                    btn.addEventListener('click', async () => {
+                        const uid = btn.dataset.uid;
+                        const current = btn.textContent === '🚫' ? true : false;
+                        const newBan = !current;
+                        if (isDemoMode) {
+                            let all = JSON.parse(localStorage.getItem('ct_demoAllUsers') || '{}');
+                            if (all[uid]) { all[uid].isBanned = newBan;
+                                localStorage.setItem('ct_demoAllUsers', JSON.stringify(all)); }
+                            if (uid === currentUid) { currentUser.isBanned = newBan;
+                                localStorage.setItem('ct_demoUser', JSON.stringify(currentUser)); }
+                            toast(`User ${newBan ? 'banned' : 'unbanned'} (demo)`, 'success');
+                            renderAdminUsers();
+                            if (uid === currentUid) {
+                                if (newBan) { document.getElementById('bannedOverlay').classList.add('open');
+                                    isBanned = true; } else { document.getElementById('bannedOverlay').classList.remove(
+                                        'open');
+                                    isBanned = false; }
+                            }
+                            return;
+                        }
+                        try {
+                            await db.collection('users').doc(uid).update({ isBanned: newBan });
+                            toast(`User ${newBan ? 'banned' : 'unbanned'}!`, 'success');
+                            renderAdminUsers();
+                            if (uid === currentUid) {
+                                if (newBan) { document.getElementById('bannedOverlay').classList.add('open');
+                                    isBanned = true; } else { document.getElementById('bannedOverlay').classList.remove(
+                                        'open');
+                                    isBanned = false; }
+                            }
+                        } catch (e) { toast('Failed', 'error'); }
+                    });
+                });
+
+                list.querySelectorAll('[data-action="clearFake"]').forEach(btn => {
+                    btn.addEventListener('click', async () => {
+                        const uid = btn.dataset.uid;
+                        if (isDemoMode) {
+                            let all = JSON.parse(localStorage.getItem('ct_demoAllUsers') || '{}');
+                            if (all[uid]) { all[uid].isFakeReferral = false;
+                                localStorage.setItem('ct_demoAllUsers', JSON.stringify(all)); }
+                            if (uid === currentUid) { currentUser.isFakeReferral = false;
+                                localStorage.setItem('ct_demoUser', JSON.stringify(currentUser)); }
+                            toast('Fake flag cleared (demo)', 'success');
+                            renderAdminUsers();
+                            return;
+                        }
+                        try {
+                            await db.collection('users').doc(uid).update({ isFakeReferral: false });
+                            toast('Fake flag cleared!', 'success');
+                            renderAdminUsers();
+                        } catch (e) { toast('Failed', 'error'); }
+                    });
+                });
+            }
+
+            // -------- ADMIN: TASKS --------
+            function renderAdminTasks() {
+                const list = document.getElementById('adminTaskList');
+                if (allTasks.length === 0) {
+                    list.innerHTML = `<div class="empty-state"><div class="msg">No tasks</div></div>`;
+                    return;
+                }
+
+                list.innerHTML = allTasks.map(t => `
+              <div class="admin-task-item">
+                <div class="info">
+                  <div class="name">${t.icon || '📌'} ${t.title} ${t.active !== false ? '' : '(inactive)'}</div>
+                  <div class="sub">${t.desc || ''} | +${t.reward || 0} coins | ${t.type || 'task'}</div>
+                </div>
+                <div class="admin-actions">
+                  <button class="btn-sm ${t.active !== false ? 'warning' : 'success'}" data-action="toggleTask" data-id="${t.id}">${t.active !== false ? '🔇' : '🔊'}</button>
+                  <button class="btn-sm danger" data-action="deleteTask" data-id="${t.id}">🗑️</button>
+                </div>
+              </div>
+            `).join('');
+
+                list.querySelectorAll('[data-action="toggleTask"]').forEach(btn => {
+                    btn.addEventListener('click', async () => {
+                        const id = btn.dataset.id;
+                        const task = allTasks.find(t => t.id === id);
+                        if (!task) return;
+                        const newActive = task.active === false ? true : false;
+                        if (isDemoMode) {
+                            let tasks = JSON.parse(localStorage.getItem('ct_demoTasks') || '[]');
+                            tasks = tasks.map(t => { if (t.id === id) t.active = newActive; return t; });
+                            localStorage.setItem('ct_demoTasks', JSON.stringify(tasks));
+                            allTasks = tasks;
+                            toast('Task toggled (demo)', 'success');
+                            renderAdminTasks();
+                            renderTasks();
+                            return;
+                        }
+                        try {
+                            await db.collection('tasks').doc(id).update({ active: newActive });
+                            toast('Task toggled!', 'success');
+                            const snap = await db.collection('tasks').get();
+                            allTasks = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+                            renderAdminTasks();
+                            renderTasks();
+                        } catch (e) { toast('Failed', 'error'); }
+                    });
+                });
+
+                list.querySelectorAll('[data-action="deleteTask"]').forEach(btn => {
+                    btn.addEventListener('click', async () => {
+                        const id = btn.dataset.id;
+                        if (!confirm('Delete this task?')) return;
+                        if (isDemoMode) {
+                            let tasks = JSON.parse(localStorage.getItem('ct_demoTasks') || '[]');
+                            tasks = tasks.filter(t => t.id !== id);
+                            localStorage.setItem('ct_demoTasks', JSON.stringify(tasks));
+                            allTasks = tasks;
+                            toast('Task deleted (demo)', 'success');
+                            renderAdminTasks();
+                            renderTasks();
+                            return;
+                        }
+                        try {
+                            await db.collection('tasks').doc(id).delete();
+                            toast('Task deleted!', 'success');
+                            const snap = await db.collection('tasks').get();
+                            allTasks = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+                            renderAdminTasks();
+                            renderTasks();
+                        } catch (e) { toast('Failed', 'error'); }
+                    });
+                });
+            }
+
+            // -------- ADMIN: ADD TASK --------
+            document.getElementById('adminAddTaskBtn').addEventListener('click', async () => {
+                const title = document.getElementById('adminTaskTitle').value.trim();
+                const desc = document.getElementById('adminTaskDesc').value.trim();
+                const icon = document.getElementById('adminTaskIcon').value.trim() || '📌';
+                const reward = parseInt(document.getElementById('adminTaskReward').value) || 10;
+                const type = document.getElementById('adminTaskType').value;
+                const link = document.getElementById('adminTaskLink').value.trim();
+
+                if (!title) { toast('Please enter a title', 'warning'); return; }
+
+                const taskData = {
+                    title,
+                    desc: desc || '',
+                    icon,
+                    reward,
+                    type,
+                    link: link || '',
+                    active: true,
+                    createdAt: new Date().toISOString()
+                };
+
+                if (isDemoMode) {
+                    let tasks = JSON.parse(localStorage.getItem('ct_demoTasks') || '[]');
+                    const newTask = { id: 't_' + Date.now(), ...taskData };
+                    tasks.push(newTask);
+                    localStorage.setItem('ct_demoTasks', JSON.stringify(tasks));
+                    allTasks = tasks;
+                    toast('Task added (demo)!', 'success');
+                    document.getElementById('adminTaskTitle').value = '';
+                    document.getElementById('adminTaskDesc').value = '';
+                    document.getElementById('adminTaskReward').value = '';
+                    document.getElementById('adminTaskLink').value = '';
+                    renderAdminTasks();
+                    renderTasks();
+                    return;
+                }
+
+                try {
+                    await db.collection('tasks').add(taskData);
+                    toast('Task added!', 'success');
+                    const snap = await db.collection('tasks').get();
+                    allTasks = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+                    document.getElementById('adminTaskTitle').value = '';
+                    document.getElementById('adminTaskDesc').value = '';
+                    document.getElementById('adminTaskReward').value = '';
+                    document.getElementById('adminTaskLink').value = '';
+                    renderAdminTasks();
+                    renderTasks();
+                } catch (e) { toast('Failed to add task', 'error'); }
+            });
+
+            // -------- ADMIN: WITHDRAWS --------
+            async function renderAdminWithdraws() {
+                const list = document.getElementById('adminWithdrawList');
+                let requests = [];
+
+                if (isDemoMode) {
+                    requests = JSON.parse(localStorage.getItem('ct_demoWithdraws') || '[]');
+                } else {
+                    try {
+                        const snap = await db.collection('withdrawRequests').orderBy('createdAt', 'desc').get();
+                        requests = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+                    } catch (e) { requests = []; }
+                }
+
+                if (requests.length === 0) {
+                    list.innerHTML = `<div class="empty-state"><div class="msg">No withdrawal requests</div></div>`;
+                    return;
+                }
+
+                list.innerHTML = requests.map(r => `
+              <div class="admin-withdraw-item">
+                <div class="info">
+                  <div class="name">${r.userName || 'User'} — ₹${r.amount}</div>
+                  <div class="sub">UPI: ${r.upi || '-'} | ${r.createdAt ? new Date(r.createdAt).toLocaleString() : ''}</div>
+                </div>
+                <div class="admin-actions">
+                  <span class="status-badge ${r.status || 'pending'}">${r.status || 'pending'}</span>
+                  ${r.status === 'pending' ? `
+                    <button class="btn-sm success" data-action="approveWd" data-id="${r.id}">✅</button>
+                    <button class="btn-sm danger" data-action="rejectWd" data-id="${r.id}">❌</button>
+                  ` : ''}
+                </div>
+              </div>
+            `).join('');
+
+                list.querySelectorAll('[data-action="approveWd"]').forEach(btn => {
+                    btn.addEventListener('click', async () => {
+                        const id = btn.dataset.id;
+                        if (isDemoMode) {
+                            let reqs = JSON.parse(localStorage.getItem('ct_demoWithdraws') || '[]');
+                            reqs = reqs.map(r => { if (r.id === id) r.status = 'approved'; return r; });
+                            localStorage.setItem('ct_demoWithdraws', JSON.stringify(reqs));
+                            withdrawHistory = reqs.filter(r => r.userId === currentUid);
+                            toast('Withdrawal approved (demo)', 'success');
+                            renderAdminWithdraws();
+                            renderProfile();
+                            return;
+                        }
+                        try {
+                            await db.collection('withdrawRequests').doc(id).update({ status: 'approved' });
+                            toast('Withdrawal approved!', 'success');
+                            renderAdminWithdraws();
+                            // Refresh user withdraw history
+                            const snap = await db.collection('withdrawRequests')
+                                .where('userId', '==', currentUid)
+                                .orderBy('createdAt', 'desc')
+                                .get();
+                            withdrawHistory = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+                            renderProfile();
+                        } catch (e) { toast('Failed', 'error'); }
+                    });
+                });
+
+                list.querySelectorAll('[data-action="rejectWd"]').forEach(btn => {
+                    btn.addEventListener('click', async () => {
+                        const id = btn.dataset.id;
+                        if (isDemoMode) {
+                            let reqs = JSON.parse(localStorage.getItem('ct_demoWithdraws') || '[]');
+                            reqs = reqs.map(r => { if (r.id === id) r.status = 'rejected'; return r; });
+                            localStorage.setItem('ct_demoWithdraws', JSON.stringify(reqs));
+                            withdrawHistory = reqs.filter(r => r.userId === currentUid);
+                            toast('Withdrawal rejected (demo)', 'success');
+                            renderAdminWithdraws();
+                            renderProfile();
+                            return;
+                        }
+                        try {
+                            await db.collection('withdrawRequests').doc(id).update({ status: 'rejected' });
+                            toast('Withdrawal rejected!', 'success');
+                            renderAdminWithdraws();
+                            const snap = await db.collection('withdrawRequests')
+                                .where('userId', '==', currentUid)
+                                .orderBy('createdAt', 'desc')
+                                .get();
+                            withdrawHistory = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+                            renderProfile();
+                        } catch (e) { toast('Failed', 'error'); }
+                    });
+                });
+            }
+
+            // -------- ADMIN: SETTINGS --------
+            function loadSettingsForm() {
+                document.getElementById('setAdReward').value = settings.adReward || 5;
+                document.getElementById('setDailyAdLimit').value = settings.dailyAdLimit || 10;
+                document.getElementById('setRefReward').value = settings.referralReward || 100;
+                document.getElementById('setMinWithdraw').value = settings.minWithdraw || 100;
+                document.getElementById('setMinRefs').value = settings.minRefsForWithdraw || 5;
+                document.getElementById('setMinAge').value = settings.minAccountAge || 3;
+                document.getElementById('setMinAdsForRef').value = settings.minAdsForRef || 5;
+            }
+
+            document.getElementById('adminSaveSettings').addEventListener('click', async () => {
+                const data = {
+                    adReward: parseInt(document.getElementById('setAdReward').value) || 5,
+                    dailyAdLimit: parseInt(document.getElementById('setDailyAdLimit').value) || 10,
+                    referralReward: parseInt(document.getElementById('setRefReward').value) || 100,
+                    minWithdraw: parseInt(document.getElementById('setMinWithdraw').value) || 100,
+                    minRefsForWithdraw: parseInt(document.getElementById('setMinRefs').value) || 5,
+                    minAccountAge: parseInt(document.getElementById('setMinAge').value) || 3,
+                    minAdsForRef: parseInt(document.getElementById('setMinAdsForRef').value) || 5,
+                    updatedAt: new Date().toISOString()
+                };
+
+                await saveSettings(data);
+                loadSettingsForm();
+                renderAll();
+            });
+
+            // -------- ADMIN: USER SEARCH --------
+            document.getElementById('adminUserSearch')?.addEventListener('input', renderAdminUsers);
+
+            // -------- RENDER ALL --------
+            function renderAll() {
+                renderDashboard();
+                renderAdsPage();
+                renderTasks();
+                renderReferrals();
+                renderProfile();
+                updateTaskBadge();
+            }
+
+            // -------- WATCH AD BUTTON --------
+            document.getElementById('watchAdBtn').addEventListener('click', watchAd);
+
+            // -------- INIT --------
+            async function init() {
+                // Handle demo mode warning
+                if (isDemoMode) {
+                    toast('ℹ️ Running in demo mode (offline)', 'warning', 4000);
+                }
+
+                // Get Telegram user
+                let telegramUser = tgUser;
+                if (!telegramUser) {
+                    // Fallback demo user
+                    telegramUser = {
+                        id: 123456789,
+                        first_name: 'Demo',
+                        username: 'demo_user'
+                    };
+                    toast('ℹ️ Using demo user', 'info', 3000);
+                }
+
+                // Get or create user
+                await getOrCreateUser(telegramUser);
+
+                // Load all data
+                await loadAllData();
+
+                // Check if user is banned
+                if (currentUser?.isBanned) {
+                    document.getElementById('bannedOverlay').classList.add('open');
+                    isBanned = true;
+                }
+
+                // Set up real-time listeners (Firebase)
+                if (!isDemoMode && firebaseReady) {
+                    // Listen to user changes
+                    db.collection('users').doc(currentUid).onSnapshot(async (doc) => {
+                        if (doc.exists) {
+                            const data = doc.data();
+                            currentUser = { id: doc.id, ...data };
+                            if (currentUser.isBanned) {
+                                document.getElementById('bannedOverlay').classList.add('open');
+                                isBanned = true;
+                            } else {
+                                document.getElementById('bannedOverlay').classList.remove('open');
+                                isBanned = false;
+                            }
+                            renderAll();
+                        }
+                    });
+
+                    // Listen to tasks
+                    db.collection('tasks').onSnapshot((snap) => {
+                        allTasks = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+                        renderTasks();
+                        updatePendingTasks();
+                        updateTaskBadge();
+                    });
+
+                    // Listen to referrals
+                    db.collection('referrals').where('referrerId', '==', currentUid).onSnapshot((snap) => {
+                        allReferrals = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+                        renderReferrals();
+                    });
+
+                    // Listen to ad history
+                    db.collection('adsHistory').where('userId', '==', currentUid)
+                        .orderBy('createdAt', 'desc').limit(50).onSnapshot((snap) => {
+                            adHistory = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+                            renderAdsPage();
+                        });
+
+                    // Listen to withdraw history
+                    db.collection('withdrawRequests').where('userId', '==', currentUid)
+                        .orderBy('createdAt', 'desc').onSnapshot((snap) => {
+                            withdrawHistory = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+                            renderProfile();
+                        });
+
+                    // Listen to settings
+                    db.collection('settings').doc('appSettings').onSnapshot((doc) => {
+                        if (doc.exists) {
+                            settings = doc.data();
+                            renderAll();
+                        }
+                    });
+                }
+
+                // Show withdraw history in profile
+                renderProfile();
+
+                console.log('🚀 CashTasker initialized!', { user: currentUser, mode: isDemoMode ? 'demo' : 'live' });
+            }
+
+            // -------- START --------
+            init().catch(e => {
+                console.error('Init error:', e);
+                toast('Failed to initialize app', 'error');
+            });
+
+            // -------- EXPOSE FOR DEBUG --------
+            window.ct = {
+                currentUser,
+                allTasks,
+                allReferrals,
+                settings,
+                isDemoMode,
+                deviceId,
+                refresh: renderAll,
+                watchAd
+            };
+
+        })();
+    </script>
+</body>
+</html>
