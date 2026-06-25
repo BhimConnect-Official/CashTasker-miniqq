@@ -54,7 +54,7 @@
 
         /* Stats Grid */
         .stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 20px; }
-        .stat-item { background: var(--bg-color); padding: 16px; border-radius: 16px; display: flex; align-items: center; gap: 12px; box-shadow: var(--card-shadow); }
+        .stat-item { background: var(--bg-color); padding: 16px; border-radius: 16px; display: flex; align-items: center; gap: 12px; box-shadow: var(--card-shadow); border: 1px solid rgba(0,0,0,0.03); }
         .stat-icon { width: 40px; height: 40px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 18px; }
         .stat-icon.blue { background: rgba(0, 122, 255, 0.1); color: var(--primary); }
         .stat-icon.green { background: rgba(52, 199, 89, 0.1); color: var(--success); }
@@ -119,15 +119,38 @@
                     <i class="fas fa-tv" style="font-size: 32px; color: var(--primary);"></i>
                 </div>
                 <h2 style="margin-bottom: 10px;">Watch & Earn</h2>
-                <p style="color: var(--text-hint); font-size: 14px; margin-bottom: 25px;">Watch short video ads and earn coins instantly. Daily limit applies.</p>
+                <p style="color: var(--text-hint); font-size: 14px; margin-bottom: 25px;">Watch short video ads and earn coins instantly.</p>
                 <button id="btn-watch-ad" onclick="watchMonetagAd()"><i class="fas fa-play-circle"></i> Watch Ad Now</button>
             </div>
         </div>
 
         <div id="tab-tasks" class="tab-content">
+            <div id="task-list-container">
+                <div class="card"><p style="color:var(--text-hint); text-align:center;">Loading tasks...</p></div>
+            </div>
+        </div>
+
+        <div id="tab-refer" class="tab-content">
+            <div class="card" style="text-align: center; padding: 40px 20px;">
+                <div style="width: 80px; height: 80px; background: rgba(52, 199, 89, 0.1); border-radius: 50%; display: flex; justify-content: center; align-items: center; margin: 0 auto 20px auto;">
+                    <i class="fas fa-user-friends" style="font-size: 32px; color: var(--success);"></i>
+                </div>
+                <h2 style="margin-bottom: 10px;">Refer & Earn</h2>
+                <p id="ref-reward-text" style="color: var(--text-hint); font-size: 14px; margin-bottom: 25px;">Loading...</p>
+
+                <label style="font-size: 13px; font-weight: 600; margin-bottom: 8px; display: block; text-align: left;">Your Referral Link</label>
+                <div style="display: flex; gap: 10px; margin-bottom: 15px;">
+                    <input type="text" id="ref-link" readonly style="margin-bottom: 0;">
+                    <button class="btn-success" onclick="copyRefLink()" style="width: auto; padding: 0 20px;"><i class="fas fa-copy"></i></button>
+                </div>
+                <p id="ref-hint-text" style="font-size: 12px; color: var(--text-hint);"></p>
+            </div>
+
             <div class="card">
-                <h2 style="margin-bottom:15px;">Daily Tasks</h2>
-                <p style="color:gray; text-align:center;">Loading tasks...</p>
+                <h3 style="margin-bottom: 15px; font-size: 16px;">My Invites (Referral History)</h3>
+                <div id="referral-list">
+                    <p style="color:var(--text-hint); text-align:center; font-size: 14px;">Loading invites...</p>
+                </div>
             </div>
         </div>
 
@@ -144,6 +167,13 @@
                 
                 <button class="btn-success" onclick="requestWithdraw()"><i class="fas fa-paper-plane"></i> Request Payout</button>
             </div>
+
+            <div class="card" style="margin-top: 15px;">
+                <h3 style="margin-bottom: 15px; font-size: 16px;">Withdrawal History</h3>
+                <div id="history-list">
+                    <p style="color:var(--text-hint); text-align:center; font-size: 14px;">Loading history...</p>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -151,10 +181,15 @@
         <div class="nav-item active" onclick="switchTab('home')"><i class="fas fa-home"></i><span>Home</span></div>
         <div class="nav-item" onclick="switchTab('ads')"><i class="fas fa-video"></i><span>Ads</span></div>
         <div class="nav-item" onclick="switchTab('tasks')"><i class="fas fa-tasks"></i><span>Tasks</span></div>
+        <div class="nav-item" onclick="switchTab('refer')"><i class="fas fa-user-friends"></i><span>Refer</span></div>
         <div class="nav-item" onclick="switchTab('withdraw')"><i class="fas fa-wallet"></i><span>Wallet</span></div>
     </div>
 
     <script>
+        // --- ADMIN CONFIGURATION ---
+        // Apna Telegram Bot Username yahan zarur dalein (bina @ ke) taaki referral link ban sake.
+        const BOT_USERNAME = "YourBotUsernameHere"; 
+
         // --- FIREBASE CONFIG ---
         const firebaseConfig = {
             apiKey: "AIzaSyCC5nYJDubEOGFWZKlnajXmOWJs_3nd6bg",
@@ -168,44 +203,78 @@
         if (!firebase.apps.length) { firebase.initializeApp(firebaseConfig); }
         const db = firebase.firestore();
 
-        // --- TELEGRAM INIT ---
+        // --- TELEGRAM & SMART LOGIN INIT ---
         const tg = window.Telegram.WebApp;
         tg.expand();
         tg.ready();
         
+        let finalUid = "";
+        let finalName = "";
+        
+        if (tg.initDataUnsafe && tg.initDataUnsafe.user && tg.initDataUnsafe.user.id) {
+            finalUid = tg.initDataUnsafe.user.id.toString();
+            finalName = tg.initDataUnsafe.user.first_name;
+        } else {
+            let savedUid = localStorage.getItem("demo_uid");
+            if (!savedUid) {
+                savedUid = "demo_" + Math.floor(Math.random() * 100000);
+                localStorage.setItem("demo_uid", savedUid);
+            }
+            finalUid = savedUid;
+            finalName = "Demo User";
+        }
+
         let currentUser = {
-            uid: tg.initDataUnsafe?.user?.id?.toString() || "demo_" + Math.floor(Math.random()*1000),
-            name: tg.initDataUnsafe?.user?.first_name || "Guest",
-            balance: 0, adsWatched: 0, referrals: 0
+            uid: finalUid,
+            name: finalName,
+            balance: 0, adsWatched: 0, referrals: 0, referredBy: "none", referralRewardPaid: false
         };
 
-        // Default Settings
-        let settings = { coinRate: 10, adReward: 5, minWithdraw: 100, channelLink: "https://t.me/" };
+        // Default Admin Settings
+        let settings = { coinRate: 10, adReward: 5, minWithdraw: 100, channelLink: "https://t.me/", referralReward: 100, referralAdReq: 5 };
 
-        // INIT UI Header
+        // INIT UI Header & Referral Link
         document.getElementById('user-name').innerText = currentUser.name;
         document.getElementById('user-avatar').innerText = currentUser.name.charAt(0);
         document.getElementById('user-id').innerText = "UID: " + currentUser.uid;
+        document.getElementById('ref-link').value = `https://t.me/${BOT_USERNAME}?start=${currentUser.uid}`;
+
+        // --- COPY REFERRAL LINK ---
+        window.copyRefLink = function() {
+            const linkInput = document.getElementById('ref-link');
+            linkInput.select();
+            linkInput.setSelectionRange(0, 99999);
+            navigator.clipboard.writeText(linkInput.value).then(() => {
+                tg.HapticFeedback.notificationOccurred("success");
+                tg.showAlert("✅ Referral link copied!");
+            });
+        };
 
         // 1️⃣ REAL-TIME: FETCH ADMIN SETTINGS
         db.collection("settings").doc("appSettings").onSnapshot((doc) => {
             if (doc.exists) {
                 const data = doc.data();
                 settings.adReward = data.adReward || 5;
+                settings.referralReward = data.referralReward || 100;
+                settings.referralAdReq = data.referralAdReq || 5;
                 settings.coinRate = data.coinRate || 10;
                 settings.minWithdraw = data.minWithdraw || 100;
                 settings.channelLink = data.channelLink || "https://t.me/";
 
-                // Update UI based on new settings
+                // Update UI based on new settings automatically
                 document.getElementById('withdraw-hint').innerText = `Minimum withdraw: ₹${settings.minWithdraw} (${settings.minWithdraw * settings.coinRate} Coins)`;
                 document.getElementById('btn-watch-ad').innerHTML = `<i class="fas fa-play-circle"></i> Watch Ad (+${settings.adReward} Coins)`;
+                
+                document.getElementById('ref-reward-text').innerHTML = `Invite friends and earn <strong style="color:var(--success);">${settings.referralReward} Coins</strong> when they watch ${settings.referralAdReq} ads!`;
+                document.getElementById('ref-hint-text').innerText = `Reward is automatically added when your friend completes ${settings.referralAdReq} ads.`;
+                
                 updateBalanceUI();
             }
         });
 
         // 2️⃣ REAL-TIME: FETCH TASKS FROM ADMIN
         db.collection("tasks").where("active", "==", true).onSnapshot(snapshot => {
-            const taskContainer = document.getElementById('tab-tasks');
+            const taskContainer = document.getElementById('task-list-container');
             let taskHtml = `<div class="card"><h2 style="margin-bottom:15px;">Daily Tasks</h2>`;
             
             if (snapshot.empty) {
@@ -214,7 +283,7 @@
                 snapshot.forEach(doc => {
                     const task = doc.data();
                     taskHtml += `
-                    <div class="stat-item" style="margin-bottom: 15px; display: flex; justify-content: space-between; align-items: center; padding: 15px; background: var(--bg-sec); border-radius: 12px; box-shadow: none; border: 1px solid rgba(0,0,0,0.05);">
+                    <div class="stat-item" style="margin-bottom: 15px; display: flex; justify-content: space-between; align-items: center; padding: 15px; background: var(--bg-sec); border-radius: 12px;">
                         <div style="text-align: left;">
                             <strong style="font-size: 16px;">${task.title}</strong><br>
                             <small style="color: var(--primary); font-weight:bold;">Reward: ${task.reward} Coins</small>
@@ -227,30 +296,114 @@
             taskContainer.innerHTML = taskHtml;
         });
 
-        // 3️⃣ REAL-TIME: FETCH USER DATA
+        // 3️⃣ REAL-TIME: FETCH USER DATA & REGISTRATION
         db.collection("users").doc(currentUser.uid).onSnapshot((doc) => {
             if (doc.exists) {
                 const data = doc.data();
-                // Agar Admin ne ban kiya hai to full screen block show karein
                 if(data.isBanned) {
                     return document.body.innerHTML = `
                         <div style='height:100vh; display:flex; justify-content:center; align-items:center; flex-direction:column; background:var(--bg-sec); color:red;'>
                             <i class='fas fa-ban' style='font-size: 60px; margin-bottom: 20px;'></i>
                             <h2>Account Suspended</h2>
-                            <p style='color: var(--text-hint);'>Contact support for more details.</p>
+                            <p style='color: var(--text-hint);'>Contact support.</p>
                         </div>`;
                 }
                 
                 currentUser.balance = data.balance || 0;
                 currentUser.adsWatched = data.adsWatched || 0;
                 currentUser.referrals = data.referrals || 0;
+                currentUser.referredBy = data.referredBy || "none";
+                currentUser.referralRewardPaid = data.referralRewardPaid || false;
+                
                 updateBalanceUI();
             } else {
-                // First time registration setup
+                // NEW USER REGISTRATION
+                let referrerId = null;
+                if (tg.initDataUnsafe && tg.initDataUnsafe.start_param) {
+                    referrerId = tg.initDataUnsafe.start_param;
+                }
+
                 db.collection("users").doc(currentUser.uid).set({
-                    uid: currentUser.uid, name: currentUser.name, balance: 0, adsWatched: 0, referrals: 0, isBanned: false
+                    uid: currentUser.uid, 
+                    name: currentUser.name, 
+                    balance: 0, 
+                    adsWatched: 0, 
+                    referrals: 0, 
+                    isBanned: false,
+                    referredBy: referrerId || "none",
+                    referralRewardPaid: false
                 });
             }
+        });
+
+        // 4️⃣ REAL-TIME: FETCH WITHDRAWAL HISTORY
+        db.collection("withdrawRequests").where("userId", "==", currentUser.uid).onSnapshot(snapshot => {
+            const historyList = document.getElementById('history-list');
+            let historyHtml = "";
+            let requests = [];
+            
+            snapshot.forEach(doc => requests.push(doc.data()));
+            requests.sort((a,b) => (b.createdAt?.toMillis() || 0) - (a.createdAt?.toMillis() || 0));
+
+            if (requests.length === 0) {
+                historyList.innerHTML = `<p style="color:var(--text-hint); text-align:center; font-size: 14px;">No transactions yet.</p>`;
+                return;
+            }
+
+            requests.forEach(data => {
+                let statusColor = data.status === 'paid' ? 'var(--success)' : (data.status === 'rejected' ? 'var(--danger)' : '#f5a623');
+                let inrText = data.inrAmount ? `₹${data.inrAmount}` : `₹${data.amount/settings.coinRate}`; 
+                
+                historyHtml += `
+                <div style="background:var(--bg-sec); padding:15px; border-radius:12px; margin-bottom:10px; display:flex; justify-content:space-between; align-items:center; border: 1px solid rgba(0,0,0,0.05);">
+                    <div>
+                        <strong style="font-size:15px;">${data.amount} Coins <span style="color:var(--success); font-size:13px;">(${inrText})</span></strong><br>
+                        <small style="color:var(--text-hint); font-weight:500;">${data.upi}</small>
+                    </div>
+                    <div style="color:${statusColor}; font-weight:bold; font-size:13px; text-transform:uppercase; padding: 4px 10px; background: rgba(0,0,0,0.05); border-radius: 8px;">
+                        ${data.status}
+                    </div>
+                </div>`;
+            });
+            historyList.innerHTML = historyHtml;
+        });
+
+        // 5️⃣ REAL-TIME: FETCH REFERRAL HISTORY
+        db.collection("users").where("referredBy", "==", currentUser.uid).onSnapshot(snapshot => {
+            const referList = document.getElementById('referral-list');
+            let referHtml = "";
+            let refs = [];
+            
+            snapshot.forEach(doc => refs.push(doc.data()));
+
+            if (refs.length === 0) {
+                referList.innerHTML = `<p style="color:var(--text-hint); text-align:center; font-size: 14px;">You haven't invited anyone yet.</p>`;
+                return;
+            }
+
+            refs.forEach(data => {
+                let isComplete = data.referralRewardPaid === true;
+                let statusText = isComplete ? "Completed" : `Pending (${data.adsWatched || 0}/${settings.referralAdReq} Ads)`;
+                let statusColor = isComplete ? "var(--success)" : "#f5a623";
+                let iconClass = isComplete ? "fa-check-circle" : "fa-clock";
+
+                referHtml += `
+                <div style="background:var(--bg-sec); padding:15px; border-radius:12px; margin-bottom:10px; display:flex; justify-content:space-between; align-items:center; border: 1px solid rgba(0,0,0,0.05);">
+                    <div style="display: flex; align-items: center; gap: 10px;">
+                        <div style="width: 36px; height: 36px; border-radius: 50%; background: rgba(0,122,255,0.1); color: var(--primary); display: flex; justify-content: center; align-items: center; font-weight: bold; text-transform: uppercase;">
+                            ${data.name.charAt(0)}
+                        </div>
+                        <div>
+                            <strong style="font-size:15px;">${data.name}</strong><br>
+                            <small style="color:var(--text-hint); font-weight:500;">Ads watched: ${data.adsWatched || 0}</small>
+                        </div>
+                    </div>
+                    <div style="color:${statusColor}; font-weight:bold; font-size:12px; text-align:right;">
+                        <i class="fas ${iconClass}"></i><br>${statusText}
+                    </div>
+                </div>`;
+            });
+            referList.innerHTML = referHtml;
         });
 
         // --- UPDATE UI BALANCE ---
@@ -270,7 +423,7 @@
             tg.HapticFeedback.impactOccurred("light");
         }
 
-        // --- WATCH AD WITH DYNAMIC REWARD ---
+        // --- WATCH AD & VERIFY REFERRAL ---
         function watchMonetagAd() {
             const btn = document.getElementById('btn-watch-ad');
             btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Loading...';
@@ -278,12 +431,28 @@
             if (typeof show_11191563 === "function") {
                 show_11191563().then(() => {
                     tg.HapticFeedback.notificationOccurred("success");
-                    // Reward dynamic from admin setting
-                    db.collection("users").doc(currentUser.uid).update({
+                    let newAdsCount = currentUser.adsWatched + 1;
+                    
+                    let userUpdateData = {
                         balance: firebase.firestore.FieldValue.increment(settings.adReward),
                         adsWatched: firebase.firestore.FieldValue.increment(1)
-                    });
-                    tg.showAlert(`Awesome! ${settings.adReward} coins added.`);
+                    };
+
+                    if (currentUser.referredBy !== "none" && currentUser.referralRewardPaid === false && newAdsCount >= settings.referralAdReq) {
+                        userUpdateData.referralRewardPaid = true;
+                        
+                        db.collection("users").doc(currentUser.referredBy).update({
+                            balance: firebase.firestore.FieldValue.increment(settings.referralReward),
+                            referrals: firebase.firestore.FieldValue.increment(1)
+                        }).catch(err => console.log("Referrer not found"));
+                        
+                        tg.showAlert(`🎉 You watched ${settings.referralAdReq} ads! Your inviter got their reward.`);
+                    } else {
+                        tg.showAlert(`Awesome! ${settings.adReward} coins added.`);
+                    }
+
+                    db.collection("users").doc(currentUser.uid).update(userUpdateData);
+
                 }).catch(err => {
                     tg.HapticFeedback.notificationOccurred("error");
                     tg.showAlert("Ad closed early or failed! No coins awarded.");
@@ -317,10 +486,13 @@
                 return tg.showAlert("Insufficient balance.");
             }
 
+            const inrValue = amount / settings.coinRate;
+
             db.collection("withdrawRequests").add({
                 userId: currentUser.uid, 
                 userName: currentUser.name, 
                 amount: amount, 
+                inrAmount: inrValue,
                 upi: upi, 
                 status: 'pending', 
                 createdAt: firebase.firestore.FieldValue.serverTimestamp()
@@ -329,7 +501,7 @@
                     balance: firebase.firestore.FieldValue.increment(-amount) 
                 });
                 tg.HapticFeedback.notificationOccurred("success");
-                tg.showAlert("Withdrawal request sent successfully!");
+                tg.showAlert(`Success! Request for ₹${inrValue} submitted.`);
                 document.getElementById('amount-input').value = "";
                 document.getElementById('upi-input').value = "";
             });
