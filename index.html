@@ -1465,11 +1465,101 @@
             color: var(--success);
             font-size: 13px;
         }
+
+        /* ===== CHANNEL JOIN MODAL ===== */
+        .channel-modal {
+            position: fixed;
+            inset: 0;
+            z-index: 600;
+            background: rgba(0, 0, 0, 0.7);
+            backdrop-filter: blur(8px);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        .channel-modal.open {
+            display: flex;
+        }
+        .channel-modal .modal-box {
+            background: var(--bg-secondary);
+            border-radius: var(--radius);
+            padding: 28px 24px;
+            max-width: 380px;
+            width: 100%;
+            text-align: center;
+            box-shadow: var(--shadow-hover);
+            animation: fadeUp 0.4s ease;
+        }
+        .channel-modal .modal-box .icon {
+            font-size: 48px;
+            margin-bottom: 12px;
+        }
+        .channel-modal .modal-box h2 {
+            font-size: 20px;
+            margin-bottom: 8px;
+        }
+        .channel-modal .modal-box p {
+            font-size: 14px;
+            color: var(--text-secondary);
+            margin-bottom: 16px;
+        }
+        .channel-modal .modal-box .btn {
+            margin-top: 6px;
+        }
+        .channel-modal .modal-box .btn-link {
+            background: var(--accent);
+            color: #fff;
+            border: none;
+            padding: 10px 20px;
+            border-radius: var(--radius-sm);
+            font-weight: 600;
+            cursor: pointer;
+            font-family: var(--font);
+            text-decoration: none;
+            display: inline-block;
+        }
+        .channel-modal .modal-box .btn-link:active {
+            transform: scale(0.96);
+        }
+        .channel-modal .modal-box .skip-link {
+            display: block;
+            margin-top: 10px;
+            font-size: 13px;
+            color: var(--text-muted);
+            cursor: pointer;
+            text-decoration: underline;
+        }
+
+        /* Ad loading spinner */
+        .ad-loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(255,255,255,0.3);
+            border-radius: 50%;
+            border-top-color: #fff;
+            animation: spin 0.8s linear infinite;
+        }
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
     </style>
 </head>
 <body>
 
     <div id="app">
+
+        <!-- ===== CHANNEL JOIN MODAL ===== -->
+        <div class="channel-modal" id="channelModal">
+            <div class="modal-box">
+                <div class="icon">📢</div>
+                <h2>Join Our Channel</h2>
+                <p>To get started and stay updated, please join our official Telegram channel.</p>
+                <a href="#" class="btn-link" id="channelJoinBtn" target="_blank">Join Channel</a>
+                <span class="skip-link" id="channelSkipBtn">I already joined</span>
+            </div>
+        </div>
 
         <!-- ===== BANNED OVERLAY ===== -->
         <div class="banned-overlay" id="bannedOverlay">
@@ -1662,7 +1752,7 @@
 
                 <div class="form-group">
                     <label>Amount (₹)</label>
-                    <input type="number" id="withdrawAmount" placeholder="Enter amount" min="100" />
+                    <input type="number" id="withdrawAmount" placeholder="Enter amount" min="1" />
                 </div>
                 <div class="form-group">
                     <label>UPI ID</label>
@@ -1692,13 +1782,20 @@
 
             <!-- Dashboard -->
             <div class="admin-page active" id="atab-dashboard">
-                <div class="stats-grid" style="grid-template-columns:1fr 1fr;">
+                <div class="stats-grid" style="grid-template-columns:1fr 1fr 1fr;">
                     <div class="stat-item"><div class="num" id="adminTotalUsers">0</div><div class="lbl">Total Users</div></div>
-                    <div class="stat-item"><div class="num" id="adminActiveToday">0</div><div class="lbl">Active Today</div></div>
+                    <div class="stat-item"><div class="num" id="adminTotalAds">0</div><div class="lbl">Total Ads Watched</div></div>
+                    <div class="stat-item"><div class="num" id="adminTotalTasks">0</div><div class="lbl">Tasks Done</div></div>
                     <div class="stat-item"><div class="num" id="adminTotalWithdraws">0</div><div class="lbl">Withdrawals</div></div>
                     <div class="stat-item"><div class="num" id="adminCoinsDist">0</div><div class="lbl">Coins Distributed</div></div>
+                    <div class="stat-item"><div class="num" id="adminActiveToday">0</div><div class="lbl">Active Today</div></div>
                 </div>
-                <div class="card"><div class="card-title">📈 Quick Overview</div><p class="text-muted fs-14">Admin dashboard loaded. Use tabs above to manage users, tasks, withdrawals, and settings.</p></div>
+                <div class="card">
+                    <div class="card-title">📈 Recent Registrations</div>
+                    <div id="adminRecentUsers" style="max-height:200px;overflow-y:auto;">
+                        <div class="empty-state"><div class="msg">No users yet</div></div>
+                    </div>
+                </div>
             </div>
 
             <!-- Users -->
@@ -1747,10 +1844,16 @@
                     <div class="settings-group"><label>Reward per Ad (coins)</label><input type="number" id="setAdReward" /></div>
                     <div class="settings-group"><label>Daily Ad Limit</label><input type="number" id="setDailyAdLimit" /></div>
                     <div class="settings-group"><label>Referral Reward (coins)</label><input type="number" id="setRefReward" /></div>
+                    <div class="settings-group"><label>Coin to INR Rate (coins per ₹1)</label><input type="number" id="setCoinRate" step="0.1" /></div>
                     <div class="settings-group"><label>Minimum Withdraw (₹)</label><input type="number" id="setMinWithdraw" /></div>
                     <div class="settings-group"><label>Min Active Refs for Withdraw</label><input type="number" id="setMinRefs" /></div>
                     <div class="settings-group"><label>Min Account Age (days)</label><input type="number" id="setMinAge" /></div>
                     <div class="settings-group"><label>Min Ads for Referral Active</label><input type="number" id="setMinAdsForRef" /></div>
+                    <div class="settings-group"><label>Telegram Channel Link (for new users)</label><input type="text" id="setChannelLink" placeholder="https://t.me/yourchannel" /></div>
+                    <div class="settings-group" style="display:flex;align-items:center;gap:10px;">
+                        <label style="margin:0;">Show channel prompt to new users</label>
+                        <input type="checkbox" id="setShowChannelPrompt" style="width:auto;" />
+                    </div>
                     <button class="btn btn-primary btn-block" id="adminSaveSettings">💾 Save Settings</button>
                 </div>
             </div>
@@ -1762,7 +1865,7 @@
 
     <script>
         // ============================================================
-        //  CASH TASKER – COMPLETE APP LOGIC
+        //  CASH TASKER – COMPLETE APP LOGIC (ENHANCED AD HANDLING)
         // ============================================================
 
         (function() {
@@ -1813,7 +1916,7 @@
             }
 
             // -------- STATE --------
-            let currentUser = null; // full user doc
+            let currentUser = null;
             let currentUid = null;
             let allTasks = [];
             let allReferrals = [];
@@ -1826,6 +1929,8 @@
             let pendingTaskCount = 0;
             let isBanned = false;
             let deviceId = null;
+            let isFirstVisit = true;
+            let isAdLoading = false;
 
             // -------- DOM REFS --------
             const $ = (s) => document.querySelector(s);
@@ -1886,7 +1991,6 @@
                 setTheme(current === 'dark' ? 'light' : 'dark');
             }
 
-            // init theme
             setTheme(getTheme());
             document.getElementById('themeToggle').addEventListener('click', toggleTheme);
 
@@ -1897,7 +2001,6 @@
                 if (target) target.classList.add('active');
                 $$('.nav-item').forEach(n => n.classList.remove('active'));
                 document.querySelector(`.nav-item[data-page="${page}"]`)?.classList.add('active');
-                // Update task badge
                 updateTaskBadge();
             }
 
@@ -1908,7 +2011,6 @@
                 });
             });
 
-            // Home buttons
             document.getElementById('watchAdBtnHome').addEventListener('click', () => navigateTo('ads'));
             document.getElementById('tasksBtnHome').addEventListener('click', () => navigateTo('tasks'));
             document.getElementById('withdrawBtn').addEventListener('click', openWithdrawModal);
@@ -1941,7 +2043,6 @@
                 document.getElementById('adminPanel').classList.remove('open');
             });
 
-            // Admin tabs
             document.querySelectorAll('.admin-tabs .tab').forEach(tab => {
                 tab.addEventListener('click', () => {
                     document.querySelectorAll('.admin-tabs .tab').forEach(t => t.classList.remove('active'));
@@ -1949,6 +2050,7 @@
                     document.querySelectorAll('.admin-page').forEach(p => p.classList.remove('active'));
                     const target = document.getElementById('atab-' + tab.dataset.atab);
                     if (target) target.classList.add('active');
+                    if (tab.dataset.atab === 'dashboard') loadAdminData();
                     if (tab.dataset.atab === 'users') renderAdminUsers();
                     if (tab.dataset.atab === 'tasks') renderAdminTasks();
                     if (tab.dataset.atab === 'withdraws') renderAdminWithdraws();
@@ -2025,10 +2127,13 @@
                         adReward: 5,
                         dailyAdLimit: 10,
                         referralReward: 100,
+                        coinRate: 10,
                         minWithdraw: 100,
                         minRefsForWithdraw: 5,
                         minAccountAge: 3,
-                        minAdsForRef: 5
+                        minAdsForRef: 5,
+                        channelLink: 'https://t.me/yourchannel',
+                        showChannelPrompt: true
                     };
                     return settings;
                 }
@@ -2041,10 +2146,13 @@
                             adReward: 5,
                             dailyAdLimit: 10,
                             referralReward: 100,
+                            coinRate: 10,
                             minWithdraw: 100,
                             minRefsForWithdraw: 5,
                             minAccountAge: 3,
-                            minAdsForRef: 5
+                            minAdsForRef: 5,
+                            channelLink: 'https://t.me/yourchannel',
+                            showChannelPrompt: true
                         };
                         await db.collection('settings').doc('appSettings').set(settings);
                     }
@@ -2054,10 +2162,13 @@
                         adReward: 5,
                         dailyAdLimit: 10,
                         referralReward: 100,
+                        coinRate: 10,
                         minWithdraw: 100,
                         minRefsForWithdraw: 5,
                         minAccountAge: 3,
-                        minAdsForRef: 5
+                        minAdsForRef: 5,
+                        channelLink: 'https://t.me/yourchannel',
+                        showChannelPrompt: true
                     };
                     return settings;
                 }
@@ -2086,7 +2197,6 @@
                 currentUid = uid;
 
                 if (isDemoMode) {
-                    // Demo user
                     let demoUser = JSON.parse(localStorage.getItem('ct_demoUser') || 'null');
                     if (!demoUser) {
                         demoUser = {
@@ -2094,8 +2204,8 @@
                             name: telegramUser.first_name || 'Demo User',
                             username: telegramUser.username || 'demo',
                             photoUrl: '',
-                            balance: 50,
-                            totalEarnings: 50,
+                            balance: 0,
+                            totalEarnings: 0,
                             referrals: 0,
                             activeReferrals: 0,
                             referralEarnings: 0,
@@ -2109,12 +2219,15 @@
                             isFakeReferral: false,
                             withdrawalsCount: 0,
                             completedTasks: [],
-                            recentTasks: []
+                            recentTasks: [],
+                            hasSeenChannelPrompt: false
                         };
                         localStorage.setItem('ct_demoUser', JSON.stringify(demoUser));
+                        isFirstVisit = true;
+                    } else {
+                        isFirstVisit = !demoUser.hasSeenChannelPrompt;
                     }
                     currentUser = demoUser;
-                    // Check ban
                     if (currentUser.isBanned) {
                         isBanned = true;
                         document.getElementById('bannedOverlay').classList.add('open');
@@ -2126,23 +2239,21 @@
                     const userDoc = await db.collection('users').doc(uid).get();
                     if (userDoc.exists) {
                         const data = userDoc.data();
-                        // Check device match
                         if (data.deviceId && data.deviceId !== deviceId) {
                             toast('⚠️ This account is linked to another device.', 'warning');
                         }
                         currentUser = { id: uid, ...data };
+                        isFirstVisit = !data.hasSeenChannelPrompt;
                         if (currentUser.isBanned) {
                             isBanned = true;
                             document.getElementById('bannedOverlay').classList.add('open');
                         }
-                        // Update device if needed
                         if (!data.deviceId) {
                             await db.collection('users').doc(uid).update({ deviceId: deviceId });
                             currentUser.deviceId = deviceId;
                         }
                         return currentUser;
                     } else {
-                        // New user
                         const newUser = {
                             uid: uid,
                             name: telegramUser.first_name || 'User',
@@ -2163,11 +2274,12 @@
                             isFakeReferral: false,
                             withdrawalsCount: 0,
                             completedTasks: [],
-                            recentTasks: []
+                            recentTasks: [],
+                            hasSeenChannelPrompt: false
                         };
                         await db.collection('users').doc(uid).set(newUser);
                         currentUser = { id: uid, ...newUser };
-                        // Check for referral
+                        isFirstVisit = true;
                         await handleReferral(uid, telegramUser);
                         return currentUser;
                     }
@@ -2181,7 +2293,6 @@
 
             // -------- REFERRAL HANDLING --------
             async function handleReferral(newUid, tgUser) {
-                // Check if app was opened with start param
                 let startParam = '';
                 try {
                     if (tgWebApp && tgWebApp.initDataUnsafe) {
@@ -2196,7 +2307,6 @@
                     return;
                 }
 
-                // Check if referrer exists
                 let referrer;
                 if (isDemoMode) {
                     const allUsers = JSON.parse(localStorage.getItem('ct_demoAllUsers') || '{}');
@@ -2213,12 +2323,10 @@
                     return;
                 }
 
-                // Check device fraud
                 const newDevice = deviceId;
                 const refDevice = referrer.deviceId;
                 const isFake = newDevice === refDevice;
 
-                // Create referral record
                 const refData = {
                     referrerId: referrerId,
                     referredId: newUid,
@@ -2234,7 +2342,6 @@
                     let refs = JSON.parse(localStorage.getItem('ct_demoReferrals') || '[]');
                     refs.push({ id: 'ref_' + Date.now(), ...refData });
                     localStorage.setItem('ct_demoReferrals', JSON.stringify(refs));
-                    // Update referrer
                     let allUsers = JSON.parse(localStorage.getItem('ct_demoAllUsers') || '{}');
                     if (allUsers[referrerId]) {
                         allUsers[referrerId].referrals = (allUsers[referrerId].referrals || 0) + 1;
@@ -2246,7 +2353,6 @@
 
                 try {
                     await db.collection('referrals').add(refData);
-                    // Increment referrer's referral count
                     await db.collection('users').doc(referrerId).update({
                         referrals: firebase.firestore.FieldValue.increment(1)
                     });
@@ -2278,7 +2384,6 @@
             async function loadAllData() {
                 await loadSettings();
 
-                // Load tasks
                 if (isDemoMode) {
                     let tasks = JSON.parse(localStorage.getItem('ct_demoTasks') || 'null');
                     if (!tasks) {
@@ -2308,7 +2413,6 @@
                     }
                 }
 
-                // Load referrals
                 if (isDemoMode) {
                     allReferrals = JSON.parse(localStorage.getItem('ct_demoReferrals') || '[]');
                 } else {
@@ -2320,7 +2424,6 @@
                     }
                 }
 
-                // Load ad history
                 if (isDemoMode) {
                     adHistory = JSON.parse(localStorage.getItem('ct_demoAdHistory') || '[]');
                 } else {
@@ -2333,7 +2436,6 @@
                     }
                 }
 
-                // Load withdraw history
                 if (isDemoMode) {
                     withdrawHistory = JSON.parse(localStorage.getItem('ct_demoWithdraws') || '[]');
                 } else {
@@ -2346,17 +2448,30 @@
                     }
                 }
 
-                // Update pending tasks count
                 updatePendingTasks();
+                renderAll();
 
-                // Render all
-                renderDashboard();
-                renderAdsPage();
-                renderTasks();
-                renderReferrals();
-                renderProfile();
-                updateTaskBadge();
+                if (isFirstVisit && settings.showChannelPrompt !== false && settings.channelLink) {
+                    setTimeout(showChannelPrompt, 1000);
+                }
             }
+
+            // -------- CHANNEL PROMPT --------
+            function showChannelPrompt() {
+                const modal = document.getElementById('channelModal');
+                const link = settings.channelLink || 'https://t.me/yourchannel';
+                document.getElementById('channelJoinBtn').href = link;
+                modal.classList.add('open');
+            }
+
+            document.getElementById('channelJoinBtn').addEventListener('click', function(e) {});
+
+            document.getElementById('channelSkipBtn').addEventListener('click', async function() {
+                document.getElementById('channelModal').classList.remove('open');
+                await updateUser({ hasSeenChannelPrompt: true });
+                isFirstVisit = false;
+                toast('Thanks! You can always join later.', 'info');
+            });
 
             // -------- UPDATE PENDING TASKS --------
             function updatePendingTasks() {
@@ -2380,8 +2495,9 @@
             function renderDashboard() {
                 if (!currentUser) return;
                 const u = currentUser;
+                const rate = settings.coinRate || 10;
                 document.getElementById('balanceAmount').textContent = u.balance || 0;
-                const inr = ((u.balance || 0) / 25).toFixed(2);
+                const inr = ((u.balance || 0) / rate).toFixed(2);
                 document.getElementById('balanceINR').textContent = inr;
 
                 document.getElementById('statEarned').textContent = u.totalEarnings || 0;
@@ -2395,7 +2511,6 @@
                 const age = Math.floor((Date.now() - joinDate.getTime()) / (1000 * 60 * 60 * 24));
                 document.getElementById('qsAge').textContent = age + 'd';
 
-                // Recent activity
                 const list = document.getElementById('activityList');
                 const activities = u.recentTasks || [];
                 if (activities.length === 0) {
@@ -2411,7 +2526,6 @@
               `).join('');
                 }
 
-                // Update withdraw rules display
                 document.getElementById('ruleMinAmtVal').textContent = settings.minWithdraw || 100;
                 document.getElementById('ruleMinRefsVal').textContent = settings.minRefsForWithdraw || 5;
                 document.getElementById('ruleAgeVal').textContent = settings.minAccountAge || 3;
@@ -2423,11 +2537,7 @@
                 document.getElementById('adRewardDisplay').textContent = reward;
 
                 const dailyLimit = settings.dailyAdLimit || 10;
-                const watched = currentUser?.adsWatched || 0;
-                // For today's count, we need to count today's ads. Using simple approach: stored in user
-                // We'll track daily via adsWatchedToday in user
                 let todayCount = currentUser?.adsWatchedToday || 0;
-                // Reset daily if new day
                 const lastAdDate = currentUser?.lastAdDate || '';
                 const today = new Date().toDateString();
                 if (lastAdDate !== today) {
@@ -2439,7 +2549,6 @@
                 const pct = dailyLimit > 0 ? Math.min(100, (todayCount / dailyLimit) * 100) : 0;
                 document.getElementById('adProgressFill').style.width = pct + '%';
 
-                // Ad history
                 const list = document.getElementById('adHistoryList');
                 if (adHistory.length === 0) {
                     list.innerHTML =
@@ -2455,10 +2564,15 @@
                 }
             }
 
-            // -------- WATCH AD --------
+            // -------- WATCH AD (ENHANCED WITH TIMEOUT & ERROR HANDLING) --------
             async function watchAd() {
                 if (isBanned) {
                     toast('Your account is banned', 'error');
+                    return;
+                }
+
+                if (isAdLoading) {
+                    toast('Ad is already loading...', 'warning');
                     return;
                 }
 
@@ -2475,26 +2589,35 @@
                     return;
                 }
 
-                // Show Monteg ad
-                try {
-                    // Check if Monteg SDK is loaded
-                    if (typeof show_11191563 === 'function') {
-                        toast('Loading ad...', 'info');
-                        await show_11191563();
-                    } else {
-                        // Fallback: simulate ad
-                        toast('Ad loaded (simulated)', 'info');
-                        await new Promise(r => setTimeout(r, 2000));
-                    }
+                // Check if Monteg SDK is available
+                if (typeof show_11191563 !== 'function') {
+                    toast('Ad SDK not loaded. Please refresh and try again.', 'error');
+                    return;
+                }
 
-                    // Reward user
+                // Disable button and show loading state
+                const adBtn = document.getElementById('watchAdBtn');
+                const originalText = adBtn.innerHTML;
+                adBtn.innerHTML = '<span class="ad-loading"></span> Loading...';
+                adBtn.disabled = true;
+                isAdLoading = true;
+
+                try {
+                    toast('Loading ad...', 'info');
+                    // Create a promise that races the ad with a 30-second timeout
+                    const adPromise = show_11191563();
+                    const timeoutPromise = new Promise((_, reject) =>
+                        setTimeout(() => reject(new Error('Ad timeout')), 30000)
+                    );
+                    await Promise.race([adPromise, timeoutPromise]);
+
+                    // If we reach here, ad was successfully watched
                     const reward = settings.adReward || 5;
                     const newBalance = (currentUser.balance || 0) + reward;
                     const newTotal = (currentUser.totalEarnings || 0) + reward;
                     const newAdsWatched = (currentUser.adsWatched || 0) + 1;
                     const newToday = (currentUser.adsWatchedToday || 0) + 1;
 
-                    // Update user
                     await updateUser({
                         balance: newBalance,
                         totalEarnings: newTotal,
@@ -2503,7 +2626,6 @@
                         lastAdDate: new Date().toDateString()
                     });
 
-                    // Add to ad history
                     const adEntry = {
                         userId: currentUid,
                         reward: reward,
@@ -2514,27 +2636,29 @@
                         localStorage.setItem('ct_demoAdHistory', JSON.stringify(adHistory));
                     } else {
                         await db.collection('adsHistory').add(adEntry);
-                        // Refresh ad history
                         const snap = await db.collection('adsHistory').where('userId', '==', currentUid).orderBy(
                             'createdAt', 'desc').limit(50).get();
                         adHistory = snap.docs.map(d => ({ id: d.id, ...d.data() }));
                     }
 
-                    // Update referral ads watched
                     await updateReferralAdsWatched();
 
                     toast(`🎉 +${reward} coins for watching ad!`, 'success');
                     renderAll();
 
-                } catch (e) {
-                    console.error('Ad error:', e);
-                    toast('Ad failed to load. Please try again.', 'error');
+                } catch (error) {
+                    console.error('Ad error:', error);
+                    toast('Ad failed to load or was skipped. No reward given.', 'error');
+                } finally {
+                    // Restore button
+                    adBtn.innerHTML = originalText;
+                    adBtn.disabled = false;
+                    isAdLoading = false;
                 }
             }
 
             // -------- UPDATE REFERRAL ADS WATCHED --------
             async function updateReferralAdsWatched() {
-                // Find pending referral where this user is the referred
                 if (isDemoMode) {
                     let refs = JSON.parse(localStorage.getItem('ct_demoReferrals') || '[]');
                     let updated = false;
@@ -2544,7 +2668,6 @@
                             const minAds = settings.minAdsForRef || 5;
                             if (newCount >= minAds) {
                                 r.status = 'active';
-                                // Reward referrer
                                 const refReward = settings.referralReward || 100;
                                 let allUsers = JSON.parse(localStorage.getItem('ct_demoAllUsers') || '{}');
                                 if (allUsers[r.referrerId]) {
@@ -2554,7 +2677,6 @@
                                     allUsers[r.referrerId].activeReferrals = (allUsers[r.referrerId].activeReferrals ||
                                         0) + 1;
                                     localStorage.setItem('ct_demoAllUsers', JSON.stringify(allUsers));
-                                    // Also update currentUser if referrer is current user
                                     if (r.referrerId === currentUid) {
                                         currentUser.balance = (currentUser.balance || 0) + refReward;
                                         currentUser.totalEarnings = (currentUser.totalEarnings || 0) + refReward;
@@ -2588,9 +2710,7 @@
                         const newCount = (data.adsWatched || 0) + 1;
                         const minAds = settings.minAdsForRef || 5;
                         if (newCount >= minAds) {
-                            // Activate referral
                             await doc.ref.update({ status: 'active', adsWatched: newCount });
-                            // Reward referrer
                             const refReward = settings.referralReward || 100;
                             await db.collection('users').doc(data.referrerId).update({
                                 balance: firebase.firestore.FieldValue.increment(refReward),
@@ -2637,7 +2757,6 @@
               `;
                 }).join('');
 
-                // Event listeners
                 list.querySelectorAll('[data-taskid]').forEach(btn => {
                     btn.addEventListener('click', () => completeTask(btn.dataset.taskid));
                 });
@@ -2659,20 +2778,17 @@
                     return;
                 }
 
-                // Simulate verification for task types
                 if (task.type === 'telegram' || task.type === 'youtube' || task.type === 'website') {
                     toast('Verifying...', 'info');
                     await new Promise(r => setTimeout(r, 1200));
                 }
 
-                // Reward
                 const reward = task.reward || 10;
                 const newBalance = (currentUser.balance || 0) + reward;
                 const newTotal = (currentUser.totalEarnings || 0) + reward;
                 const newTasksDone = (currentUser.tasksDone || 0) + 1;
                 const newCompleted = [...completed, taskId];
 
-                // Recent activity
                 const recent = currentUser.recentTasks || [];
                 recent.unshift({
                     icon: task.icon || '📌',
@@ -2702,12 +2818,10 @@
                 document.getElementById('refEarnings').textContent = u.referralEarnings || 0;
                 document.getElementById('refRewardDisplay').textContent = settings.referralReward || 100;
 
-                // Referral link
                 const botUsername = 'Cash_Taskerbot';
                 const link = `https://t.me/${botUsername}?start=${currentUid}`;
                 document.getElementById('refLink').textContent = link;
 
-                // Referral list
                 const list = document.getElementById('referralList');
                 if (allReferrals.length === 0) {
                     list.innerHTML =
@@ -2732,7 +2846,6 @@
                     }).join('');
                 }
 
-                // Leaderboard (demo: from all users)
                 renderLeaderboard();
             }
 
@@ -2795,6 +2908,22 @@
                 document.getElementById('pWithdrawals').textContent = u.withdrawalsCount || 0;
 
                 document.getElementById('upiInput').value = u.upi || '';
+
+                const wList = document.getElementById('withdrawHistoryList');
+                if (withdrawHistory.length === 0) {
+                    wList.innerHTML =
+                        `<div class="empty-state"><div class="icon">📭</div><div class="msg">No withdrawals yet</div></div>`;
+                } else {
+                    wList.innerHTML = withdrawHistory.map(w => `
+                <div class="withdraw-item">
+                  <div class="info">
+                    <div class="amount">₹${w.amount}</div>
+                    <div class="date">${w.createdAt ? new Date(w.createdAt).toLocaleString() : ''}</div>
+                  </div>
+                  <span class="status-badge ${w.status || 'pending'}">${w.status || 'pending'}</span>
+                </div>
+              `).join('');
+                }
             }
 
             // -------- WITHDRAW --------
@@ -2806,7 +2935,6 @@
                 const modal = document.getElementById('withdrawModal');
                 modal.classList.add('open');
 
-                // Check rules
                 const minAmt = settings.minWithdraw || 100;
                 const minRefs = settings.minRefsForWithdraw || 5;
                 const minAge = settings.minAccountAge || 3;
@@ -2815,8 +2943,11 @@
                 const joinDate = currentUser?.joinDate ? new Date(currentUser.joinDate) : new Date();
                 const age = Math.floor((Date.now() - joinDate.getTime()) / (1000 * 60 * 60 * 24));
 
+                const rate = settings.coinRate || 10;
+                const balanceInr = (currentUser?.balance || 0) / rate;
+
                 document.getElementById('ruleMinAmt').innerHTML =
-                    `💰 Minimum amount: ₹${minAmt} ${(currentUser?.balance || 0) / 10 >= minAmt ? '✅' : '❌'}`;
+                    `💰 Minimum amount: ₹${minAmt} ${balanceInr >= minAmt ? '✅' : '❌'}`;
                 document.getElementById('ruleMinRefs').innerHTML =
                     `👥 Minimum active referrals: ${minRefs} ${(currentUser?.activeReferrals || 0) >= minRefs ? '✅' : '❌'}`;
                 document.getElementById('ruleAge').innerHTML =
@@ -2836,8 +2967,9 @@
                 const amount = parseInt(document.getElementById('withdrawAmount').value);
                 const upi = document.getElementById('withdrawUpi').value.trim();
 
-                if (!amount || amount < (settings.minWithdraw || 100)) {
-                    toast(`Minimum withdrawal is ₹${settings.minWithdraw || 100}`, 'warning');
+                const minAmt = settings.minWithdraw || 100;
+                if (!amount || amount < minAmt) {
+                    toast(`Minimum withdrawal is ₹${minAmt}`, 'warning');
                     return;
                 }
 
@@ -2846,7 +2978,6 @@
                     return;
                 }
 
-                // Check eligibility
                 const minRefs = settings.minRefsForWithdraw || 5;
                 const minAge = settings.minAccountAge || 3;
                 const joinDate = currentUser?.joinDate ? new Date(currentUser.joinDate) : new Date();
@@ -2866,14 +2997,13 @@
                     return;
                 }
 
-                // Check coin balance
-                const requiredCoins = amount * 10;
+                const rate = settings.coinRate || 10;
+                const requiredCoins = amount * rate;
                 if ((currentUser?.balance || 0) < requiredCoins) {
                     toast('Insufficient balance!', 'error');
                     return;
                 }
 
-                // Create withdrawal request
                 const reqData = {
                     userId: currentUid,
                     userName: currentUser?.name || 'User',
@@ -2886,20 +3016,17 @@
                 if (isDemoMode) {
                     withdrawHistory.push({ ...reqData, id: 'wd_' + Date.now() });
                     localStorage.setItem('ct_demoWithdraws', JSON.stringify(withdrawHistory));
-                    // Deduct balance
                     await updateUser({ balance: (currentUser.balance || 0) - requiredCoins });
                     toast('Withdrawal request submitted! (demo)', 'success');
                 } else {
                     try {
                         await db.collection('withdrawRequests').add(reqData);
-                        // Deduct balance
                         await db.collection('users').doc(currentUid).update({
                             balance: firebase.firestore.FieldValue.increment(-requiredCoins),
                             withdrawalsCount: firebase.firestore.FieldValue.increment(1)
                         });
                         currentUser.balance = (currentUser.balance || 0) - requiredCoins;
                         currentUser.withdrawalsCount = (currentUser.withdrawalsCount || 0) + 1;
-                        // Refresh withdraw history
                         const snap = await db.collection('withdrawRequests')
                             .where('userId', '==', currentUid)
                             .orderBy('createdAt', 'desc')
@@ -2922,7 +3049,6 @@
                 navigator.clipboard.writeText(link).then(() => {
                     toast('📋 Link copied!', 'success');
                 }).catch(() => {
-                    // Fallback
                     const ta = document.createElement('textarea');
                     ta.value = link;
                     document.body.appendChild(ta);
@@ -2950,42 +3076,63 @@
                 if (confirm('Are you sure you want to logout?')) {
                     localStorage.removeItem('ct_demoUser');
                     toast('Logged out', 'info');
-                    // Reload
                     location.reload();
                 }
             });
 
             // -------- ADMIN: LOAD DATA --------
             async function loadAdminData() {
-                // Dashboard stats
                 let totalUsers = 0,
-                    activeToday = 0,
+                    totalAds = 0,
+                    totalTasksDone = 0,
                     totalWithdraws = 0,
-                    coinsDist = 0;
+                    coinsDist = 0,
+                    activeToday = 0;
+                let recentUsers = [];
 
                 if (isDemoMode) {
                     const allUsers = JSON.parse(localStorage.getItem('ct_demoAllUsers') || '{}');
-                    totalUsers = Object.keys(allUsers).length;
+                    const usersArr = Object.values(allUsers);
+                    totalUsers = usersArr.length;
+                    totalAds = usersArr.reduce((s, u) => s + (u.adsWatched || 0), 0);
+                    totalTasksDone = usersArr.reduce((s, u) => s + (u.tasksDone || 0), 0);
                     const withdraws = JSON.parse(localStorage.getItem('ct_demoWithdraws') || '[]');
                     totalWithdraws = withdraws.length;
-                    coinsDist = Object.values(allUsers).reduce((s, u) => s + (u.totalEarnings || 0), 0);
+                    coinsDist = usersArr.reduce((s, u) => s + (u.totalEarnings || 0), 0);
                     activeToday = Math.min(totalUsers, 5);
+                    recentUsers = usersArr.sort((a, b) => new Date(b.joinDate) - new Date(a.joinDate)).slice(0, 10);
                 } else {
                     try {
                         const uSnap = await db.collection('users').get();
-                        totalUsers = uSnap.size;
+                        const users = uSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+                        totalUsers = users.length;
+                        totalAds = users.reduce((s, u) => s + (u.adsWatched || 0), 0);
+                        totalTasksDone = users.reduce((s, u) => s + (u.tasksDone || 0), 0);
                         const wSnap = await db.collection('withdrawRequests').get();
                         totalWithdraws = wSnap.size;
-                        const cSnap = await db.collection('users').get();
-                        coinsDist = cSnap.docs.reduce((s, d) => s + (d.data().totalEarnings || 0), 0);
+                        coinsDist = users.reduce((s, u) => s + (u.totalEarnings || 0), 0);
                         activeToday = Math.min(totalUsers, 10);
+                        recentUsers = users.sort((a, b) => new Date(b.joinDate) - new Date(a.joinDate)).slice(0, 10);
                     } catch (e) {}
                 }
 
                 document.getElementById('adminTotalUsers').textContent = totalUsers;
-                document.getElementById('adminActiveToday').textContent = activeToday;
+                document.getElementById('adminTotalAds').textContent = totalAds;
+                document.getElementById('adminTotalTasks').textContent = totalTasksDone;
                 document.getElementById('adminTotalWithdraws').textContent = totalWithdraws;
                 document.getElementById('adminCoinsDist').textContent = coinsDist;
+                document.getElementById('adminActiveToday').textContent = activeToday;
+
+                const recentList = document.getElementById('adminRecentUsers');
+                if (recentUsers.length === 0) {
+                    recentList.innerHTML = `<div class="empty-state"><div class="msg">No users yet</div></div>`;
+                } else {
+                    recentList.innerHTML = recentUsers.map(u => `
+                <div style="padding:6px 0;border-bottom:1px solid var(--border-color);font-size:13px;">
+                  <strong>${u.name || 'User'}</strong> (${u.uid || u.id}) - joined ${u.joinDate ? new Date(u.joinDate).toLocaleDateString() : 'recently'}
+                </div>
+              `).join('');
+                }
 
                 renderAdminUsers();
                 renderAdminTasks();
@@ -3026,7 +3173,7 @@
               <div class="admin-user-item">
                 <div class="info">
                   <div class="name">${u.name || 'User'} ${u.isBanned ? '🚫' : ''}</div>
-                  <div class="sub">ID: ${u.uid || u.id} | Balance: ${u.balance || 0} | Refs: ${u.referrals || 0}</div>
+                  <div class="sub">ID: ${u.uid || u.id} | Balance: ${u.balance || 0} | Refs: ${u.referrals || 0} | Ads: ${u.adsWatched || 0}</div>
                 </div>
                 <div class="admin-actions">
                   <button class="btn-sm btn-primary" data-action="editBal" data-uid="${u.uid || u.id}">💰</button>
@@ -3036,7 +3183,6 @@
               </div>
             `).join('');
 
-                // Event listeners
                 list.querySelectorAll('[data-action="editBal"]').forEach(btn => {
                     btn.addEventListener('click', async () => {
                         const uid = btn.dataset.uid;
@@ -3300,7 +3446,6 @@
                             await db.collection('withdrawRequests').doc(id).update({ status: 'approved' });
                             toast('Withdrawal approved!', 'success');
                             renderAdminWithdraws();
-                            // Refresh user withdraw history
                             const snap = await db.collection('withdrawRequests')
                                 .where('userId', '==', currentUid)
                                 .orderBy('createdAt', 'desc')
@@ -3344,10 +3489,13 @@
                 document.getElementById('setAdReward').value = settings.adReward || 5;
                 document.getElementById('setDailyAdLimit').value = settings.dailyAdLimit || 10;
                 document.getElementById('setRefReward').value = settings.referralReward || 100;
+                document.getElementById('setCoinRate').value = settings.coinRate || 10;
                 document.getElementById('setMinWithdraw').value = settings.minWithdraw || 100;
                 document.getElementById('setMinRefs').value = settings.minRefsForWithdraw || 5;
                 document.getElementById('setMinAge').value = settings.minAccountAge || 3;
                 document.getElementById('setMinAdsForRef').value = settings.minAdsForRef || 5;
+                document.getElementById('setChannelLink').value = settings.channelLink || '';
+                document.getElementById('setShowChannelPrompt').checked = settings.showChannelPrompt !== false;
             }
 
             document.getElementById('adminSaveSettings').addEventListener('click', async () => {
@@ -3355,10 +3503,13 @@
                     adReward: parseInt(document.getElementById('setAdReward').value) || 5,
                     dailyAdLimit: parseInt(document.getElementById('setDailyAdLimit').value) || 10,
                     referralReward: parseInt(document.getElementById('setRefReward').value) || 100,
+                    coinRate: parseFloat(document.getElementById('setCoinRate').value) || 10,
                     minWithdraw: parseInt(document.getElementById('setMinWithdraw').value) || 100,
                     minRefsForWithdraw: parseInt(document.getElementById('setMinRefs').value) || 5,
                     minAccountAge: parseInt(document.getElementById('setMinAge').value) || 3,
                     minAdsForRef: parseInt(document.getElementById('setMinAdsForRef').value) || 5,
+                    channelLink: document.getElementById('setChannelLink').value.trim() || '',
+                    showChannelPrompt: document.getElementById('setShowChannelPrompt').checked,
                     updatedAt: new Date().toISOString()
                 };
 
@@ -3385,15 +3536,12 @@
 
             // -------- INIT --------
             async function init() {
-                // Handle demo mode warning
                 if (isDemoMode) {
                     toast('ℹ️ Running in demo mode (offline)', 'warning', 4000);
                 }
 
-                // Get Telegram user
                 let telegramUser = tgUser;
                 if (!telegramUser) {
-                    // Fallback demo user
                     telegramUser = {
                         id: 123456789,
                         first_name: 'Demo',
@@ -3402,21 +3550,15 @@
                     toast('ℹ️ Using demo user', 'info', 3000);
                 }
 
-                // Get or create user
                 await getOrCreateUser(telegramUser);
-
-                // Load all data
                 await loadAllData();
 
-                // Check if user is banned
                 if (currentUser?.isBanned) {
                     document.getElementById('bannedOverlay').classList.add('open');
                     isBanned = true;
                 }
 
-                // Set up real-time listeners (Firebase)
                 if (!isDemoMode && firebaseReady) {
-                    // Listen to user changes
                     db.collection('users').doc(currentUid).onSnapshot(async (doc) => {
                         if (doc.exists) {
                             const data = doc.data();
@@ -3432,7 +3574,6 @@
                         }
                     });
 
-                    // Listen to tasks
                     db.collection('tasks').onSnapshot((snap) => {
                         allTasks = snap.docs.map(d => ({ id: d.id, ...d.data() }));
                         renderTasks();
@@ -3440,27 +3581,23 @@
                         updateTaskBadge();
                     });
 
-                    // Listen to referrals
                     db.collection('referrals').where('referrerId', '==', currentUid).onSnapshot((snap) => {
                         allReferrals = snap.docs.map(d => ({ id: d.id, ...d.data() }));
                         renderReferrals();
                     });
 
-                    // Listen to ad history
                     db.collection('adsHistory').where('userId', '==', currentUid)
                         .orderBy('createdAt', 'desc').limit(50).onSnapshot((snap) => {
                             adHistory = snap.docs.map(d => ({ id: d.id, ...d.data() }));
                             renderAdsPage();
                         });
 
-                    // Listen to withdraw history
                     db.collection('withdrawRequests').where('userId', '==', currentUid)
                         .orderBy('createdAt', 'desc').onSnapshot((snap) => {
                             withdrawHistory = snap.docs.map(d => ({ id: d.id, ...d.data() }));
                             renderProfile();
                         });
 
-                    // Listen to settings
                     db.collection('settings').doc('appSettings').onSnapshot((doc) => {
                         if (doc.exists) {
                             settings = doc.data();
@@ -3469,9 +3606,7 @@
                     });
                 }
 
-                // Show withdraw history in profile
                 renderProfile();
-
                 console.log('🚀 CashTasker initialized!', { user: currentUser, mode: isDemoMode ? 'demo' : 'live' });
             }
 
@@ -3481,7 +3616,6 @@
                 toast('Failed to initialize app', 'error');
             });
 
-            // -------- EXPOSE FOR DEBUG --------
             window.ct = {
                 currentUser,
                 allTasks,
